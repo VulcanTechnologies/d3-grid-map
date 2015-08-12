@@ -103,7 +103,7 @@
     change();
   };
 
-  GridMap.arrayBufferToGeoJSON = function(array) {
+  GridMap.uInt8ArrayToGeoJSON = function(array) {
     // given a UInt8ClampedArray containing data in
     // RGBA format, returns GeoJSON
 
@@ -124,6 +124,9 @@
       var b = array[i+2];
       var a = array[i+3];
 
+      if (r === 0 && g === 0 && b === 0 && a === 0) {
+        continue;
+      }
       var coordinates = this.cellIdToCoordinates[cell_id];
 
       var feature = {
