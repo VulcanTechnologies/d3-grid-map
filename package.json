@@ -1,0 +1,25 @@
+{
+  "name": "d3-grid-map",
+  "version": "0.0.1",
+  "description": "Creates a map in a container using d3 for plotting gridded data sets",
+  "main": "index.js",
+  "keywords": [
+    "d3",
+    "map",
+    "geo",
+    "gridded",
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/SeaAroundUs/d3-grid-map.git"
+  },
+  "dependencies": {
+    "d3": "~3.4",
+    "topojson": "~1.6",
+    "d3-geo-projection": "~0.2",
+  },
+  "authors": [
+    "Joseph Sheedy <joseph.sheedy@gmail.com>"
+  ],
+  "license": "MIT"
+}
