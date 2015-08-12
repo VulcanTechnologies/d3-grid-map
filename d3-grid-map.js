@@ -5,27 +5,24 @@
     height: null,
     grid_rows: null,
     grid_cols: null,
-    grid: null,
     countries: null,
     canvas: null,
     context: null,
     margin: null,
-    projection: null, // d3.geo.mollweide(),
+    projection: null,
     graticule: d3.geo.graticule(),
     geojson: null,
-    run: false,
     rotate_longitude: 0,
     rotate_latitude: 0,
     path: null,
-    cache: null,
     container: null,
   };
 
 
-  GridMap.scale = d3.scale.quantize()
+  var defaultScale = d3.scale.quantize()
     .domain([0,255])
-    .range(['#00f', '#10e', '#20d', '#30c', '#40b', '#50a','#609','#708','#807',
-    '#906','#a05','#b04','#c03','#d02','#e01', '#f00']);
+    .range(['#000', '#101', '#202', '#303', '#404', '#505','#606','#707','#808',
+    '#909','#a0a','#b0b','#c0c','#d0d','#e0e', '#f00']);
 
   GridMap.init = function (_container, gridSize, options) {
     this.grid_cols = gridSize[0];
@@ -36,7 +33,7 @@
     this.width = rect.width;
     this.height = rect.height;
     this.countries = options.countries;
-    this.projection = options.projection || d3.geo.molleweide();
+    this.projection = options.projection || d3.geo.mollweide();
     this.margin = options.margin || {top: 30, right: 10, bottom: 30, left: 10};
 
     this.projection.translate([this.width/2, this.height/2]);
@@ -45,12 +42,14 @@
       .attr('width', this.width)
       .attr('height', this.height);
 
+    this.scale = options.scale || defaultScale;
+
     var self = this;
     var drag = d3.behavior.drag();
     drag
       .on('dragstart', function (d) {
-        this.cache = this.geojson;
-        this.geojson = {features:[]};
+        this.cache = self.geojson;
+        self.geojson = {features:[]};
       })
       .on('drag', function (d) {
         self.rotate_longitude += d3.event.dx;
@@ -59,8 +58,8 @@
         self.draw();
       })
       .on('dragend', function (d) {
-        this.geojson = this.cache;
-        this.draw();
+        self.geojson = this.cache;
+        self.draw();
       });
 
     var zoom = d3.behavior.zoom();
@@ -84,12 +83,16 @@
     d3.select(window).on('resize', this.resize);
   };
 
-  GridMap.setData = function (data) {
-    // this.grid = grid;
-    if (data.byteLength >= 0) {
-      // ArrayBuffer
-      this.geojson = this.buff2GeoJSON(data);
-    }
+  GridMap.setDataUnsparseTypedArray = function (data) {
+    this.geojson = this.uInt8ArrayToGeoJSON(data);
+    this.draw();
+  };
+  GridMap.setDataArrayBuffer = function (data) {
+    this.geojson = this.arrayBufferToGeoJSON(data);
+    this.draw();
+  };
+  GridMap.setDataGeoJSON = function (data) {
+    this.geojson = data;
     this.draw();
   };
 
@@ -100,7 +103,54 @@
     change();
   };
 
-  GridMap.buff2GeoJSON = function(buff) {
+  GridMap.arrayBufferToGeoJSON = function(array) {
+    // given a UInt8ClampedArray containing data in
+    // RGBA format, returns GeoJSON
+
+    // The format is expected to be
+    // a sequence of Uint8 elements representing RGBA
+    // values for each cell from cell ID 1 to the final cell ID,
+    // in column first order.
+
+    var geojson = {
+       type: "FeatureCollection",
+       features: []
+    };
+
+    for (var i=0; i<array.length; i+=4) {
+      var cell_id = i/4 + 1;
+      var r = array[i];
+      var g = array[i+1];
+      var b = array[i+2];
+      var a = array[i+3];
+
+      var coordinates = this.cellIdToCoordinates[cell_id];
+
+      var feature = {
+         type: "Feature",
+         id: i,
+         geometry: {
+             type: "Polygon",
+             coordinates: [coordinates]
+         },
+         properties: {
+          rgba: [r,g,b,a]
+        }
+      };
+      geojson.features.push(feature);
+    }
+
+    return geojson;
+  };
+
+  GridMap.arrayBufferToGeoJSON = function(buff) {
+    // given an ArrayBuffer buff containing data in
+    // packed binary format, returns GeoJSON
+
+    // The packed binary format is expected to be
+    // a sequence of Uint32 elements in which the most
+    // significant byte is the cell value and the
+    // lowest 3 bytes represent the cell ID.
     var v = new DataView(buff);
 
     var geojson = {
@@ -123,7 +173,7 @@
              type: "Polygon",
              coordinates: [coordinates]
          },
-         properties: {abundance: abundance }
+         properties: {value: abundance }
       };
       geojson.features.push(feature);
     }
@@ -155,8 +205,12 @@
 
     var gm = this;
     this.geojson.features.forEach(function(feature){
-      var color = gm.scale(feature.properties.value);
-      console.log(feature);
+      var color = null;
+      if (feature.properties.rgba) {
+        color = 'rgba(' + rgba.join(',') + ')';
+      } else {
+        color = gm.scale(feature.properties.value);
+      }
       gm.context.beginPath();
       gm.path(feature);
       gm.context.fillStyle = color;
@@ -190,6 +244,6 @@
     }
   };
 
-  d3.geo.gridmap = GridMap;
+  d3.geo.GridMap = GridMap;
 
 })();
