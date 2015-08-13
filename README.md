@@ -38,15 +38,15 @@ The data for the grid can be set by one of several methods:
 
 Example
 =====
-d3.json('data/countries.topojson', function(error, countries) {
-  var options = {
-    countries: countries
-  };
-  var gridSize = [720, 360];
+    d3.json('data/countries.topojson', function(error, countries) {
+      var options = {
+        countries: countries
+      };
+      var gridSize = [720, 360];
 
-  var map = d3.geo.GridMap;
+      var map = d3.geo.GridMap;
 
-  map.init('#gridmap', gridSize, options);
+      map.init('#gridmap', gridSize, options);
 
-  map.setDataArrayBuffer(data);
-});
+      map.setDataArrayBuffer(data);
+    });
