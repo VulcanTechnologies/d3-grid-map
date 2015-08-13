@@ -121,7 +121,7 @@
 
     this.initCellIdToCoordinates();
     this.initEvents();
-    // d3.select(window).on('resize', this.resize);
+    d3.select(window).on('resize', this.resize.bind(this));
 
     self.draw();
   };
@@ -202,9 +202,13 @@
   };
 
   GridMap.resize = function() {
-    this.width = parseInt(this.container.node().style('width'), 10);
+    this.width = parseInt(this.container.style('width'), 10);
     this.width = this.width - this.margin.left - this.margin.right;
     d3.select('canvas').attr('width', this.width);
+    this.projection
+      .translate([this.width/2, this.height/2])
+      .clipExtent([[0, 0], [this.width, this.height]]);
+    this.initEvents();
     this.draw();
   };
 
