@@ -150,11 +150,11 @@
 
     this.context.clearRect(0, 0, this.width, this.height);
 
-    // draw world background (the sea). acting funny for now
-    // this.context.beginPath();
-    // this.path(this.worldGeoJSON);
-    // this.context.fillStyle = this.seaColor;
-    // this.context.fill();
+    //draw world background (the sea). acting funny for now
+    this.context.beginPath();
+    this.path(this.worldGeoJSON);
+    this.context.fillStyle = this.seaColor;
+    this.context.fill();
 
     // draw countries
     this.context.beginPath();
