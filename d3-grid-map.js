@@ -25,7 +25,7 @@
 
   var defaultColorScale = d3.scale.quantize()
     .domain([0,255])
-    .range(['#000', '#101', '#202', '#303', '#404', '#505','#606','#707','#808',
+    .range(['#f00', '#c01', '#a02', '#303', '#404', '#505','#606','#707','#808',
     '#909','#a0a','#b0b','#c0c','#d0d','#e0e', '#f00']);
 
   GridMap.initEvents = function() {
@@ -34,34 +34,28 @@
     var scale = 150;
     var drag = d3.behavior.drag()
       .on('dragstart', function () {
-        this.cache = self.geojson;
-        self.geojson = {features:[]};
       })
       .on('drag', function () {
         self.rotate_longitude += 100 * d3.event.dx / zoom.scale();
         self.rotate_latitude -= 100 * d3.event.dy / zoom.scale();
         self.projection.rotate([self.rotate_longitude, self.rotate_latitude]);
-        self.draw();
+        self.drawWorld();
       })
       .on('dragend', function () {
-        self.geojson = this.cache;
         self.draw();
       });
 
     var zoom = d3.behavior.zoom()
       .on('zoomstart', function() {
-        this.cache = self.geojson;
-        self.geojson = {features:[]};
       })
       .on('zoomend', function() {
-        self.geojson = this.cache;
         self.draw();
       })
       .on('zoom', function(d) {
         scale = d3.event.scale;
         self.area = 20000 / scale / scale;
         self.projection.scale(scale);
-        self.draw();
+        self.drawWorld();
       })
       .scale(this.width/6)
       .scaleExtent([this.width/6, 1000]);
@@ -117,11 +111,11 @@
     this.context = this.canvas.node().getContext('2d');
     this.colorScale = options.colorScale || defaultColorScale;
 
-    this.path = d3.geo.path()
+    this.simplifyingPath = d3.geo.path()
       .projection({stream: function(s) {return simplify.stream(clip.stream(self.projection.stream(s)));}})
       .context(this.context);
 
-    this.graticulePath = d3.geo.path()
+    this.path = d3.geo.path()
       .projection(this.projection)
       .context(this.context);
 
@@ -153,15 +147,18 @@
     };
 
   GridMap.drawWorld = function() {
-    // draw world background (the sea)
-    this.context.beginPath();
-    this.graticulePath(this.worldGeoJSON);
-    this.context.fillStyle = this.seaColor;
-    this.context.fill();
+
+    this.context.clearRect(0, 0, this.width, this.height);
+
+    // draw world background (the sea). acting funny for now
+    // this.context.beginPath();
+    // this.path(this.worldGeoJSON);
+    // this.context.fillStyle = this.seaColor;
+    // this.context.fill();
 
     // draw countries
     this.context.beginPath();
-    this.canvas.each(this.path);
+    this.canvas.each(this.simplifyingPath);
     this.context.strokeStyle = 'rgba(100,100,100,.8)';
     this.context.lineWidth = 1;
     this.context.fillStyle = this.landColor;
@@ -171,7 +168,7 @@
     // overlay graticule.  Requires it's own path so
     // it won't get clipped/simplified
     this.context.beginPath();
-    this.graticulePath(this.graticule());
+    this.path(this.graticule());
     this.context.lineWidth = 1;
     this.context.strokeStyle = 'rgba(100,100,100,.3)';
     this.context.stroke();
@@ -182,7 +179,6 @@
       this.geojson = _geojson;
     }
 
-    this.context.clearRect(0, 0, this.width, this.height);
     this.drawWorld();
 
     var self = this;
@@ -192,10 +188,13 @@
         if (feature.properties.rgba) {
           color = 'rgba(' + feature.properties.rgba.join(',') + ')';
         } else {
-          color = self.scale(feature.properties.value);
+          color = self.colorScale(feature.properties.value);
         }
         self.context.beginPath();
         self.path(feature);
+        self.context.strokeStyle = 'rgba(0,0,0,1)';
+        self.context.lineWidth = 0.5;
+        self.context.stroke();
         self.context.fillStyle = color;
         self.context.fill();
       });
