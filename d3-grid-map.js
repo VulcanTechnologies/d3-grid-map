@@ -135,11 +135,11 @@
           geometry: {
             type: 'Polygon',
             coordinates: [[
-              [-180, 90],
-              [180, 90],
-              [180, -90],
-              [-180, -89.9999], // sea doesn't draw if this is -90. get right up on it.
-              [-180, 90],
+              [-179.999, 89.999],
+              [179.999, 89.999],
+              [179.999, -89.999],
+              [-179.999, -89.9999],
+              [-179.999, 89.999]
             ]]
           }
         }
@@ -150,11 +150,11 @@
 
     this.context.clearRect(0, 0, this.width, this.height);
 
-    // draw world background (the sea). acting funny for now
-    // this.context.beginPath();
-    // this.path(this.worldGeoJSON);
-    // this.context.fillStyle = this.seaColor;
-    // this.context.fill();
+    //draw world background (the sea). acting funny for now
+    this.context.beginPath();
+    this.path(this.worldGeoJSON);
+    this.context.fillStyle = this.seaColor;
+    this.context.fill();
 
     // draw countries
     this.context.beginPath();
