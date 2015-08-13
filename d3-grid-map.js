@@ -205,6 +205,10 @@
     this.width = parseInt(this.container.style('width'), 10);
     this.width = this.width - this.margin.left - this.margin.right;
     d3.select('canvas').attr('width', this.width);
+    this.projection
+      .translate([this.width/2, this.height/2])
+      .clipExtent([[0, 0], [this.width, this.height]]);
+    this.initEvents();
     this.draw();
   };
 
