@@ -78,7 +78,6 @@
     this.landColor = options.landColor || 'rgba(237,178,48,1)';
     this.seaColor = options.seaColor || 'rgba(21,98,180,.8)';
 
-    var translate = [this.width/2, this.height/2];
     self.area = 1; // minimum area threshold for simplification
 
     var clip = d3.geo.clipExtent()
@@ -92,12 +91,12 @@
       }
     });
 
-    this.projection = options.projection ||
-      d3.geo.mollweide()
-        .translate(translate)
-        .scale(this.width/6)
-        .clipExtent([[0, 0], [self.width, self.height]])
-        .precision(0.1);
+    this.projection = options.projection || d3.geo.mollweide();
+    this.projection
+      .translate([this.width/2, this.height/2])
+      .scale(this.width/6)
+      .clipExtent([[0, 0], [self.width, self.height]])
+      .precision(0.1);
 
     this.margin = options.margin || {top: 10, right: 10, bottom: 10, left: 10};
 
