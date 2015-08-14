@@ -194,7 +194,7 @@
         }
         self.context.beginPath();
         self.path(feature);
-        self.context.strokeStyle = this.geoJsonColor;
+        self.context.strokeStyle = self.geoJsonColor;
         self.context.lineWidth = 0.5;
         self.context.stroke();
         self.context.fillStyle = color;
