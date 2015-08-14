@@ -77,6 +77,9 @@
     this.height = rect.height;
     this.landColor = options.landColor || 'rgba(237,178,48,1)';
     this.seaColor = options.seaColor || 'rgba(21,98,180,.8)';
+    this.landOutlineColor = options.landOutlineColor || 'rgba(100,100,100,.8)';
+    this.graticuleColor = options.graticuleColor || 'rgba(100,100,100,.3)';
+    this.geoJsonColor = options.geoJsonColor || 'rgba(0,0,0,1)';
 
     self.area = 1; // minimum area threshold for simplification
 
@@ -158,7 +161,7 @@
     // draw countries
     this.context.beginPath();
     this.canvas.each(this.simplifyingPath);
-    this.context.strokeStyle = 'rgba(100,100,100,.8)';
+    this.context.strokeStyle = this.landOutlineColor;
     this.context.lineWidth = 1;
     this.context.fillStyle = this.landColor;
     this.context.fill();
@@ -169,7 +172,7 @@
     this.context.beginPath();
     this.path(this.graticule());
     this.context.lineWidth = 1;
-    this.context.strokeStyle = 'rgba(100,100,100,.3)';
+    this.context.strokeStyle = this.graticuleColor;
     this.context.stroke();
   };
 
@@ -191,7 +194,7 @@
         }
         self.context.beginPath();
         self.path(feature);
-        self.context.strokeStyle = 'rgba(0,0,0,1)';
+        self.context.strokeStyle = this.geoJsonColor;
         self.context.lineWidth = 0.5;
         self.context.stroke();
         self.context.fillStyle = color;
