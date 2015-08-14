@@ -77,8 +77,10 @@
     this.height = rect.height;
     this.landColor = options.landColor || 'rgba(237,178,48,1)';
     this.seaColor = options.seaColor || 'rgba(21,98,180,.8)';
+    this.landOutlineColor = options.landOutlineColor || 'rgba(100,100,100,.8)';
+    this.graticuleColor = options.graticuleColor || 'rgba(100,100,100,.3)';
+    this.geoJsonColor = options.geoJsonColor || 'rgba(0,0,0,1)';
 
-    var translate = [this.width/2, this.height/2];
     self.area = 1; // minimum area threshold for simplification
 
     var clip = d3.geo.clipExtent()
@@ -92,12 +94,12 @@
       }
     });
 
-    this.projection = options.projection ||
-      d3.geo.mollweide()
-        .translate(translate)
-        .scale(this.width/6)
-        .clipExtent([[0, 0], [self.width, self.height]])
-        .precision(0.1);
+    this.projection = options.projection || d3.geo.mollweide();
+    this.projection
+      .translate([this.width/2, this.height/2])
+      .scale(this.width/6)
+      .clipExtent([[0, 0], [self.width, self.height]])
+      .precision(0.1);
 
     this.margin = options.margin || {top: 10, right: 10, bottom: 10, left: 10};
 
@@ -121,7 +123,7 @@
 
     this.initCellIdToCoordinates();
     this.initEvents();
-    // d3.select(window).on('resize', this.resize);
+    d3.select(window).on('resize', this.resize.bind(this));
 
     self.draw();
   };
@@ -159,7 +161,7 @@
     // draw countries
     this.context.beginPath();
     this.canvas.each(this.simplifyingPath);
-    this.context.strokeStyle = 'rgba(100,100,100,.8)';
+    this.context.strokeStyle = this.landOutlineColor;
     this.context.lineWidth = 1;
     this.context.fillStyle = this.landColor;
     this.context.fill();
@@ -170,7 +172,7 @@
     this.context.beginPath();
     this.path(this.graticule());
     this.context.lineWidth = 1;
-    this.context.strokeStyle = 'rgba(100,100,100,.3)';
+    this.context.strokeStyle = this.graticuleColor;
     this.context.stroke();
   };
 
@@ -192,7 +194,7 @@
         }
         self.context.beginPath();
         self.path(feature);
-        self.context.strokeStyle = 'rgba(0,0,0,1)';
+        self.context.strokeStyle = this.geoJsonColor;
         self.context.lineWidth = 0.5;
         self.context.stroke();
         self.context.fillStyle = color;
@@ -202,9 +204,13 @@
   };
 
   GridMap.resize = function() {
-    this.width = parseInt(this.container.node().style('width'), 10);
+    this.width = parseInt(this.container.style('width'), 10);
     this.width = this.width - this.margin.left - this.margin.right;
     d3.select('canvas').attr('width', this.width);
+    this.projection
+      .translate([this.width/2, this.height/2])
+      .clipExtent([[0, 0], [this.width, this.height]]);
+    this.initEvents();
     this.draw();
   };
 
