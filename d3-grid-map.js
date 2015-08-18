@@ -103,7 +103,8 @@
 
     topojson.presimplify(options.countries);
 
-    this.canvas = this.container.append('canvas')
+    this.canvas = this.container
+      .append('canvas')
       .datum(topojson.feature(options.countries, options.countries.objects.countries))
       .attr('width', this.width)
       .attr('height', this.height);
@@ -126,6 +127,11 @@
       d3.select(window).on('resize', this.resize.bind(this));
       this.draw();
     };
+
+    this.destroy = function() {
+      // d3 seems to be holding onto DOM elements.  get real with it.
+      this.canvas.remove();
+    }
 
     this.initEvents = function() {
 
