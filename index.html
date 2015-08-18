@@ -2,49 +2,70 @@
 <html>
     <head>
         <style type="text/css">
-            #map {
-                width: 1100px;
-                height: 800px;
+            .map {
+                width: 700px;
+                height: 500px;
                 border: 1px solid black;
-                margin-top: 50px;
-                margin-left: auto;
-                margin-right: auto;
+                margin: 0px;
+                float: left;
             }
         </style>
     </head>
     <body>
-        <div id="map"></div>
+        <div class="map" id="map1"></div>
+        <div class="map" id="map2"></div>
+        <div class="map" id="map3"></div>
+        <div class="map" id="map4"></div>
         <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
         <script src="https://cdn.rawgit.com/d3/d3-geo-projection/master/d3.geo.projection.js"></script>
         <script src="https://cdn.rawgit.com/mbostock/topojson/master/topojson.js"></script>
         <script src="d3-grid-map.js"></script>
         <script type="text/javascript">
+          var w = 720;
+          var h = 360;
+
+          // create a data grid of this size and position
+          var grid_w = 50;
+          var grid_h = 50;
+          var grid_ul_x = 335;
+          var grid_ul_y = 155;
+
+          var data1 = new Uint32Array(grid_w * grid_h);
+          var data2 = new Uint32Array(grid_w * grid_h);
+          var index = -1;
+          for (var j=0; j<grid_h; j++) {
+              for (var i=0; i<grid_w; i++) {
+                index++;
+                var cell_id = (grid_ul_y + j)*w + (grid_ul_x + i);
+
+                var cell_value = ~~(Math.random()*255);
+                var val = (cell_value << 24) | (cell_id & 0xffffff);
+                data1[index] = val;
+
+                cell_value = ~~(Math.random()*255);
+                val = (cell_value << 24) | (cell_id & 0xffffff);
+                data2[index] = val;
+              }
+          }
           d3.json('countries.topojson', function(error, countries) {
             var options = {
               countries: countries
             };
-            var w = 720;
-            var h = 360;
 
-            // create a data grid of this size and position
-            var grid_w = 50;
-            var grid_h = 50;
-            var grid_ul_x = 335;
-            var grid_ul_y = 155;
+            var map1 = new d3.geo.GridMap('#map1', [w, h], options);
+            map1.setDataArrayBuffer(data1.buffer);
 
-            var data = new Uint32Array(grid_w * grid_h);
-            var x = -1;
-            for (var j=0; j<grid_h; j++) {
-                for (var i=0; i<grid_w; i++) {
-                  var cell_id = (grid_ul_y + j)*w + (grid_ul_x + i);
-                  var cell_value = ~~(Math.random()*255);
-                  var val = (cell_value << 24) | (cell_id & 0xffffff);
-                  data[x++] = val;
-                }
-            }
-            var map = d3.geo.GridMap;
-            map.init('#map', [w, h], options);
-            map.setDataArrayBuffer(data.buffer);
+            options.projection = d3.geo.mercator();
+            var map2 = new d3.geo.GridMap('#map2', [w, h], options);
+            map2.setDataArrayBuffer(data2.buffer);
+
+            options.projection = d3.geo.orthographic();
+            var map3 = new d3.geo.GridMap('#map3', [w, h], options);
+            map3.setDataArrayBuffer(data2.buffer);
+
+            options.projection = d3.geo.airy();
+            var map4 = new d3.geo.GridMap('#map4', [w, h], options);
+            map3.setDataArrayBuffer(data2.buffer);
           });
         </script>
     </body>
