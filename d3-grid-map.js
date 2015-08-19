@@ -81,9 +81,6 @@
 
     self.area = 1; // minimum area threshold for simplification
 
-    var clip = d3.geo.clipExtent()
-        .extent([[-self.width/4, -self.height/4], [self.width/4, self.height/4]]);
-
     var simplify = d3.geo.transform({
       point: function(x, y, z) {
         if (z >= self.area) {
@@ -113,7 +110,7 @@
     this.colorScale = options.colorScale || defaultColorScale;
 
     this.simplifyingPath = d3.geo.path()
-      .projection({stream: function(s) {return simplify.stream(clip.stream(self.projection.stream(s)));}})
+      .projection({stream: function(s) {return simplify.stream(self.projection.stream(s));}})
       .context(this.context);
 
     this.path = d3.geo.path()
