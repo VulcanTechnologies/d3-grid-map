@@ -146,14 +146,14 @@
           self.drawWorld();
         })
         .on('dragend', function () {
-          self.draw();
+          self.debouncedDraw();
         });
 
       var zoom = d3.behavior.zoom()
         .on('zoomstart', function() {
         })
         .on('zoomend', function() {
-          self.draw();
+          self.debouncedDraw();
         })
         .on('zoom', function(d) {
           scale = d3.event.scale;
@@ -198,13 +198,13 @@
 
     this.draw = function(_geojson) {
       if (_geojson) {
-        this.geojson = _geojson;
+        self.geojson = _geojson;
       }
 
-      this.drawWorld();
+      self.drawWorld();
 
-      if (this.geojson && this.geojson.features) {
-        this.geojson.features.forEach(function(feature){
+      if (self.geojson && self.geojson.features) {
+        self.geojson.features.forEach(function(feature){
           var color = null;
           if (feature.properties.rgba) {
             color = 'rgba(' + feature.properties.rgba.join(',') + ')';
@@ -221,6 +221,19 @@
         });
       }
     };
+
+    var debounce = function(fn, timeout) {
+      var timeoutID = -1;
+      return function() {
+        if (timeoutID > -1) {
+          window.clearTimeout(timeoutID);
+          console.debug('debouncing');
+        }
+        timeoutID = window.setTimeout(fn, timeout);
+      };
+    };
+
+    self.debouncedDraw = debounce(self.draw, 250);
 
     this.resize = function() {
       this.width = parseInt(this.container.style('width'), 10);
