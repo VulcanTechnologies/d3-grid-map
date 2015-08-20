@@ -17,17 +17,18 @@
         properties: {},
         geometry: {
           type: 'Polygon',
-          coordinates: [[
-            [-179.999, 89.999],
-            [179.999, 89.999],
-            [179.999, -89.999],
-            [-179.999, -89.9999],
-            [-179.999, 89.999]
-          ]]
+          coordinates: null
         }
       }
     ]
   };
+
+  worldGeoJSON.features[0].geometry.coordinates = [
+    d3.range(-179.9999,179.9999).map(function(x) {return [x, 89.9999];}),
+    d3.range(89.9999,-89.9999,-1).map(function(x) {return [179.9999, x];}),
+    d3.range(179.9999,-179.9999,-1).map(function(x) {return [x, -89.9999];}),
+    d3.range(-89.9999,89.9999).map(function(x) {return [-179.9999, x];}
+  )];
 
   function _cellIdToLonLat(id, rows, cols) {
       var _id = id-1;
@@ -166,31 +167,36 @@
 
     };
 
+    var graticule = d3.geo.graticule()();
+
     this.drawWorld = function() {
       this.context.clearRect(0, 0, this.width, this.height);
 
       //draw world background (the sea)
       this.context.beginPath();
       this.path(worldGeoJSON);
+      this.context.closePath();
       this.context.fillStyle = this.seaColor;
       this.context.fill();
 
       // draw countries
       this.context.beginPath();
       this.canvas.each(this.simplifyingPath);
+      this.context.closePath();
       this.context.strokeStyle = this.landOutlineColor;
       this.context.lineWidth = 1;
+      this.context.stroke();
       this.context.fillStyle = this.landColor;
       this.context.fill();
-      this.context.stroke();
 
       // overlay graticule
       this.context.beginPath();
-      var graticule = d3.geo.graticule();
-      this.path(graticule());
+      this.path(graticule);
+      this.context.closePath();
       this.context.lineWidth = 1;
       this.context.strokeStyle = this.graticuleColor;
       this.context.stroke();
+
     };
 
     this.draw = function(_geojson) {

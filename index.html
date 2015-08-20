@@ -59,7 +59,7 @@
             var map2 = new d3.geo.GridMap('#map2', [w, h], options);
             map2.setDataArrayBuffer(data2.buffer);
 
-            options.projection = d3.geo.orthographic();
+            options.projection = d3.geo.orthographic().clipAngle(90);
             var map3 = new d3.geo.GridMap('#map3', [w, h], options);
             map3.setDataArrayBuffer(data2.buffer);
 
