@@ -1,6 +1,7 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
     <head>
+        <meta charset='utf-8'>
         <style type="text/css">
             .map {
                 width: 700px;
@@ -49,11 +50,16 @@
           }
           d3.json('countries.topojson', function(error, countries) {
             var options = {
-              countries: countries
+              countries: countries,
+              hud: {
+                fontSize: 30,
+                fontColor: 'white',
+                verticalOffset: 5
+              }
             };
 
             var map1 = new d3.geo.GridMap('#map1', [w, h], options);
-            map1.setDataArrayBuffer(data1.buffer);
+            map1.setData(data1.buffer);
 
             options.projection = d3.geo.mercator();
             var map2 = new d3.geo.GridMap('#map2', [w, h], options);
