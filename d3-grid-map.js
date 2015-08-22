@@ -98,13 +98,12 @@
       .clipExtent([[0, 0], [self.width, self.height]])
       .precision(0.1);
 
-    this.margin = options.margin || {top: 10, right: 10, bottom: 10, left: 10};
-
     topojson.presimplify(options.countries);
-
     this.canvas = this.container
       .append('canvas')
       .style('position', 'absolute')
+      .style('top', '0px')
+      .style('left', '0px')
       .datum(topojson.feature(options.countries, options.countries.objects.countries))
       .attr('width', this.width)
       .attr('height', this.height);
@@ -112,6 +111,8 @@
     this.hud = this.container
       .append('canvas')
       .style('position', 'absolute')
+      .style('top', '0px')
+      .style('left', '0px')
       .attr('width', this.width)
       .attr('height', this.height);
 
@@ -180,7 +181,6 @@
 
         feature = {
           type: 'Feature',
-          id: i,
           geometry: {
             type: 'Polygon',
             coordinates: [coordinates]
@@ -239,6 +239,9 @@
       this.container.call(zoom);
 
       this.container.on('mousemove', function() {
+        if (!self.options.onCellHover && !self.options.hud) {
+          return;
+        }
         var coords = self.projection.invert(d3.mouse(this));
         var cellId = null;
         var feature = null;
@@ -340,7 +343,6 @@
 
     this.resize = function() {
       this.width = parseInt(this.container.style('width'), 10);
-      this.width = this.width - this.margin.left - this.margin.right;
       this.canvas.attr('width', this.width);
       this.hud.attr('width', this.width);
       this.projection
