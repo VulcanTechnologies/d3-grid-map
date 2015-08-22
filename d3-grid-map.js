@@ -6,8 +6,7 @@
 
   var defaultColorScale = d3.scale.quantize()
     .domain([0,255])
-    .range(['#f00', '#c01', '#a02', '#303', '#404', '#505','#606','#707','#808',
-    '#909','#a0a','#b0b','#c0c','#d0d','#e0e', '#f00']);
+    .range(['#000', '#111', '#222', '#333', '#444', '#555', '#666', '#777', '#888', '#999', '#aaa', '#bbb', '#ccc', '#ddd', '#eee', '#fff']);
 
   var worldGeoJSON = {
     type: 'FeatureCollection',
@@ -128,6 +127,10 @@
       .projection(this.projection)
       .context(this.context);
 
+    this.hud_path = d3.geo.path()
+      .projection(this.projection)
+      .context(this.hud_context);
+
     this.init = function() {
       this.cellIdToCoordinates = cellIdToCoordinates(gridSize);
       this.initEvents();
@@ -148,6 +151,54 @@
 
       var cellId = row * this.gridCols + col + 1;
       return cellId;
+    };
+
+    this.updateHUD = function(cellId, coords, feature) {
+      var coordFormat = d3.format(' >+7.3f');
+
+      var fontSize = self.options.hud.fontSize || 30;
+      var verticalOffset = self.options.hud.verticalOffset || 10;
+      var fontColor = self.options.hud.fontColor || 'white';
+      var fontFace = self.options.hud.fontFace || 'monospace';
+
+      var font = fontSize + 'px ' + fontFace;
+      var h = fontSize + verticalOffset;
+      var gradient = self.hud_context.createLinearGradient(0,self.height-h,0,self.height);
+      gradient.addColorStop(0, 'rgba(0,0,0,0.0');
+      gradient.addColorStop(1, 'rgba(0,0,0,1.0');
+
+      self.hud_context.clearRect(0, 0, self.width, self.height);
+      self.hud_context.fillStyle = gradient;
+      self.hud_context.fillRect(0,self.height-(h), self.width, self.height);
+
+      var s = '';
+
+      s = 'cell: ' + cellId + ' ( ' + coordFormat(coords[0]) + '°,' + coordFormat(coords[1]) + '° )';
+
+      if (feature === null) {
+        var coordinates = self.cellIdToCoordinates[cellId];
+
+        feature = {
+          type: 'Feature',
+          id: i,
+          geometry: {
+            type: 'Polygon',
+            coordinates: [coordinates]
+          },
+        };
+      } else {
+          s += ' value: ' + feature.properties.value;
+      }
+
+      self.hud_context.font = font;
+      self.hud_context.fillStyle = fontColor;
+      self.hud_context.fillText(s, 0, self.height - verticalOffset);
+
+      self.hud_context.beginPath();
+      self.hud_context.strokeStyle = 'white';
+      self.hud_context.lineWidth = 2;
+      self.hud_path(feature);
+      self.hud_context.stroke();
     };
 
     this.initEvents = function() {
@@ -187,36 +238,28 @@
       this.container.call(drag);
       this.container.call(zoom);
 
-      if (this.options.hud) {
-        var coordFormat = d3.format(' >+8.3f');
+      this.container.on('mousemove', function() {
+        var coords = self.projection.invert(d3.mouse(this));
+        var cellId = null;
+        var feature = null;
 
-        var fontSize = self.options.hud.fontSize || 30;
-        var verticalOffset = self.options.hud.verticalOffset || 10;
-        var fontColor = self.options.hud.fontColor || 'white';
-        var fontFace = self.options.hud.fontFace || 'monospace';
+        if (self.geojson && coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
+          cellId = self.coordinatesToCellId(coords);
+          feature = self.geojson.features.filter(function(f) {return f.properties.cellId === cellId;});
 
-        var font = fontSize + 'px ' + fontFace;
-        var h = fontSize + verticalOffset;
-        var gradient = self.hud_context.createLinearGradient(0,self.height-h,0,self.height);
-        gradient.addColorStop(0, 'rgba(0,0,0,0.0');
-        gradient.addColorStop(1, 'rgba(0,0,0,1.0');
-
-        this.container.on('mousemove', function() {
-          self.hud_context.clearRect(0,self.height-(h), self.width, self.height);
-          self.hud_context.fillStyle = gradient;
-          self.hud_context.fillRect(0,self.height-(h), self.width, self.height);
-
-          var s = '';
-          var coords = self.projection.invert(d3.mouse(this));
-          if (coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
-            var cellId = self.coordinatesToCellId(coords);
-            s = 'cell ID: ' + cellId + ' ( ' + coordFormat(coords[0]) + '°,' + coordFormat(coords[1]) + '° )';
-            self.hud_context.font = font;
-            self.hud_context.fillStyle = fontColor;
-            self.hud_context.fillText(s, 0, self.height - verticalOffset);
+          if (feature.length === 1) {
+            feature = feature[0];
+            if (self.options.onCellHover) {
+              self.options.onCellHover(feature);
+            }
+          } else {
+            feature = null;
           }
-        });
-      }
+        }
+        if (self.options.hud && cellId) {
+          self.updateHUD(cellId, coords, feature);
+        }
+      });
     };
 
     var graticule = d3.geo.graticule()();
@@ -288,7 +331,6 @@
       return function() {
         if (timeoutID > -1) {
           window.clearTimeout(timeoutID);
-          console.debug('debouncing');
         }
         timeoutID = window.setTimeout(fn, timeout);
       };
@@ -391,10 +433,11 @@
       var typedArray = new Uint32Array(buff);
       for (var i=0; i<typedArray.length; i++) {
         var packed = typedArray[i];
-        var cell_id = packed & 0xfffff;
-        var abundance = packed >> 24;
-        var coordinates = this.cellIdToCoordinates[cell_id];
-
+        var cellId = packed & 0xfffff;
+        // unpack most significant byte, the data value.
+        // note the triple arrow, which fills in 0s instead of 1s.
+        var value = packed >>> 24;
+        var coordinates = this.cellIdToCoordinates[cellId];
         var feature = {
            type: 'Feature',
            id: i,
@@ -402,7 +445,10 @@
                type: 'Polygon',
                coordinates: [coordinates]
            },
-           properties: {value: abundance }
+           properties: {
+            cellId: cellId,
+            value: value
+          }
         };
         geojson.features.push(feature);
       }

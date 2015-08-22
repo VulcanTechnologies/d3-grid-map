@@ -31,8 +31,7 @@
           var grid_ul_x = 335;
           var grid_ul_y = 155;
 
-          var data1 = new Uint32Array(grid_w * grid_h);
-          var data2 = new Uint32Array(grid_w * grid_h);
+          var data = new Uint32Array(grid_w * grid_h);
           var index = -1;
           for (var j=0; j<grid_h; j++) {
               for (var i=0; i<grid_w; i++) {
@@ -40,38 +39,36 @@
                 var cell_id = (grid_ul_y + j)*w + (grid_ul_x + i);
 
                 var cell_value = ~~(Math.random()*255);
-                var val = (cell_value << 24) | (cell_id & 0xffffff);
-                data1[index] = val;
+                var val = ((cell_value & 0xff) << 24) | (cell_id & 0xffffff);
+                data[index] = val;
 
-                cell_value = ~~(Math.random()*255);
-                val = (cell_value << 24) | (cell_id & 0xffffff);
-                data2[index] = val;
               }
           }
           d3.json('countries.topojson', function(error, countries) {
             var options = {
               countries: countries,
               hud: {
-                fontSize: 30,
+                fontSize: 20,
                 fontColor: 'white',
                 verticalOffset: 5
-              }
+              },
+              onCellHover: function(feature) { console.debug('hovering over ', feature);}
             };
 
             var map1 = new d3.geo.GridMap('#map1', [w, h], options);
-            map1.setData(data1.buffer);
+            map1.setData(data.buffer);
 
             options.projection = d3.geo.mercator();
             var map2 = new d3.geo.GridMap('#map2', [w, h], options);
-            map2.setDataArrayBuffer(data2.buffer);
+            map2.setDataArrayBuffer(data.buffer);
 
             options.projection = d3.geo.orthographic().clipAngle(90);
             var map3 = new d3.geo.GridMap('#map3', [w, h], options);
-            map3.setDataArrayBuffer(data2.buffer);
+            map3.setDataArrayBuffer(data.buffer);
 
             options.projection = d3.geo.airy();
             var map4 = new d3.geo.GridMap('#map4', [w, h], options);
-            map3.setDataArrayBuffer(data2.buffer);
+            map3.setDataArrayBuffer(data.buffer);
           });
         </script>
     </body>
