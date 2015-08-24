@@ -29,35 +29,6 @@
     d3.range(-89.9999,89.9999).map(function(x) {return [-179.9999, x];}
   )];
 
-  function _cellIdToLonLat(id, rows, cols) {
-      var _id = id-1;
-      var lon = -180 + (_id % cols)/cols * rows ;
-      var lat = 90 - (~~(_id / cols)) * (180 / rows);
-      return [lon, lat];
-  }
-
-  function cellIdToCoordinates(gridSize) {
-
-    var rows = gridSize[1];
-    var cols = gridSize[0];
-    var x_size = 0.5; // this.gridCols / 360;
-    var y_size = 0.5; //this.gridRows / 180;
-
-    var array = [];
-    for (var i=1; i<=rows * cols; i++) {
-        var lonLat = _cellIdToLonLat(i, rows, cols);
-        var coordinates = [
-          lonLat,
-          [lonLat[0] + x_size, lonLat[1]],
-          [lonLat[0] + x_size, lonLat[1]-y_size],
-          [lonLat[0], lonLat[1]-y_size],
-          lonLat
-        ];
-        array[i] = coordinates;
-    }
-    return array;
-  }
-
   var GridMap = function(container, gridSize, options) {
     var self = this;
 
@@ -133,7 +104,6 @@
       .context(this.hud_context);
 
     this.init = function() {
-      this.cellIdToCoordinates = cellIdToCoordinates(gridSize);
       this.initEvents();
       d3.select(window).on('resize', this.resize.bind(this));
       this.draw();
@@ -141,6 +111,48 @@
 
     this.destroy = function() {
       this.canvas.remove();
+    };
+
+
+    this.cellIdToLonLat = function(cellId) {
+      /**
+       * given a cellId, returns an array containing the [lon,lat] of the
+       * upper left corner  points
+       * @param {Number} cellId
+       * @return {Array} coordinates
+       */
+        var _id = cellId - 1;
+        var lon = -180 + (_id % this.gridCols)/this.gridCols * this.gridRows ;
+        var lat = 90 - (~~(_id / this.gridCols)) * (180 / this.gridRows);
+        return [lon, lat];
+    };
+
+    this.cellCache = [];
+
+    this.cellIdToCoordinates = function(cellId) {
+      /**
+       * given a cellId, returns an array of arrays containing the [lon,lat] of the corner
+       * points
+       * @param {Number} cellId
+       * @return {Array} coordinates
+       */
+
+      if (this.cellCache[cellId]) {
+        return this.cellCache[cellId];
+      }
+      var x_size = 360 / this.gridCols;
+      var y_size = 180 / this.gridRows;
+
+      var lonLat = this.cellIdToLonLat(cellId);
+      var coordinates = [
+        lonLat,
+        [lonLat[0] + x_size, lonLat[1]],
+        [lonLat[0] + x_size, lonLat[1]-y_size],
+        [lonLat[0], lonLat[1]-y_size],
+        lonLat
+      ];
+      this.cellCache[cellId] = coordinates;
+      return coordinates;
     };
 
     this.coordinatesToCellId = function(coords) {
@@ -177,7 +189,7 @@
       s = 'cell: ' + cellId + ' ( ' + coordFormat(coords[0]) + '°,' + coordFormat(coords[1]) + '° )';
 
       if (feature === null) {
-        var coordinates = self.cellIdToCoordinates[cellId];
+        var coordinates = self.cellIdToCoordinates(cellId);
 
         feature = {
           type: 'Feature',
@@ -351,6 +363,14 @@
       this.draw();
     };
 
+    this.panToCentroid = function() {
+      var centroid = d3.geo.centroid(this.geojson);
+      var rotation = this.projection.rotate();
+      rotation[0] = -centroid[0]; // note the '-'
+      this.projection.rotate(rotation);
+      this.draw();
+    };
+
     this.setData = function(data) {
       if (data.constructor === ArrayBuffer) {
         this.setDataArrayBuffer(data);
@@ -399,7 +419,7 @@
         if (r === 0 && g === 0 && b === 0 && a === 0) {
           continue;
         }
-        var coordinates = this.cellIdToCoordinates[cell_id];
+        var coordinates = this.cellIdToCoordinates(cell_id);
 
         var feature = {
            type: 'Feature',
@@ -439,7 +459,7 @@
         // unpack most significant byte, the data value.
         // note the triple arrow, which fills in 0s instead of 1s.
         var value = packed >>> 24;
-        var coordinates = this.cellIdToCoordinates[cellId];
+        var coordinates = this.cellIdToCoordinates(cellId);
         var feature = {
            type: 'Feature',
            id: i,

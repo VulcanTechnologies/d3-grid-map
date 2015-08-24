@@ -29,8 +29,8 @@
           // create a data grid of this size and position
           var grid_w = 50;
           var grid_h = 50;
-          var grid_ul_x = 335;
-          var grid_ul_y = 155;
+          var grid_ul_x = 200; //335;
+          var grid_ul_y = 100; //155;
 
           var data = new Uint32Array(grid_w * grid_h);
           var index = -1;
@@ -58,14 +58,17 @@
 
             var map1 = new d3.geo.GridMap('#map1', [w, h], options);
             map1.setData(data.buffer);
+            map1.panToCentroid();
 
             options.projection = d3.geo.mercator();
             var map2 = new d3.geo.GridMap('#map2', [w, h], options);
             map2.setDataArrayBuffer(data.buffer);
+            map2.panToCentroid();
 
             options.projection = d3.geo.orthographic().clipAngle(90);
             var map3 = new d3.geo.GridMap('#map3', [w, h], options);
             map3.setDataArrayBuffer(data.buffer);
+            map3.panToCentroid();
 
             options.projection = d3.geo.airy();
             var map4 = new d3.geo.GridMap('#map4', [w, h], options);
