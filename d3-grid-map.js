@@ -88,7 +88,8 @@
       .attr('height', this.height);
 
     this.context = this.canvas.node().getContext('2d');
-    this.hud_context = this.hud.node().getContext('2d');
+    this.hudContext = this.hud.node().getContext('2d');
+
     this.colorScale = options.colorScale || defaultColorScale;
 
     this.simplifyingPath = d3.geo.path()
@@ -101,7 +102,7 @@
 
     this.hud_path = d3.geo.path()
       .projection(this.projection)
-      .context(this.hud_context);
+      .context(this.hudContext);
 
     this.init = function() {
       this.initEvents();
@@ -176,19 +177,19 @@
 
       var font = fontSize + 'px ' + fontFace;
       var h = fontSize + verticalOffset;
-      var gradient = self.hud_context.createLinearGradient(0,self.height-h,0,self.height);
+      var gradient = self.hudContext.createLinearGradient(0,self.height-h,0,self.height);
       gradient.addColorStop(0, 'rgba(0,0,0,0.0');
       gradient.addColorStop(1, 'rgba(0,0,0,1.0');
 
-      self.hud_context.clearRect(0, 0, self.width, self.height);
-      self.hud_context.fillStyle = gradient;
-      self.hud_context.fillRect(0,self.height-(h), self.width, self.height);
+      self.hudContext.clearRect(0, 0, self.width, self.height);
+      self.hudContext.fillStyle = gradient;
+      self.hudContext.fillRect(0,self.height-(h), self.width, self.height);
 
       var s = '';
 
       s = 'cell: ' + cellId + ' ( ' + coordFormat(coords[0]) + '°,' + coordFormat(coords[1]) + '° )';
 
-      if (feature === null) {
+      if (!feature) {
         var coordinates = self.cellIdToCoordinates(cellId);
 
         feature = {
@@ -202,15 +203,15 @@
           s += ' value: ' + feature.properties.value;
       }
 
-      self.hud_context.font = font;
-      self.hud_context.fillStyle = fontColor;
-      self.hud_context.fillText(s, 0, self.height - verticalOffset);
+      self.hudContext.font = font;
+      self.hudContext.fillStyle = fontColor;
+      self.hudContext.fillText(s, 0, self.height - verticalOffset);
 
-      self.hud_context.beginPath();
-      self.hud_context.strokeStyle = 'white';
-      self.hud_context.lineWidth = 2;
+      self.hudContext.beginPath();
+      self.hudContext.strokeStyle = 'white';
+      self.hudContext.lineWidth = 2;
       self.hud_path(feature);
-      self.hud_context.stroke();
+      self.hudContext.stroke();
     };
 
     this.initEvents = function() {
@@ -260,15 +261,11 @@
 
         if (self.geojson && coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
           cellId = self.coordinatesToCellId(coords);
-          feature = self.geojson.features.filter(function(f) {return f.properties.cellId === cellId;});
-
-          if (feature.length === 1) {
-            feature = feature[0];
+          feature = self.geojson._cache[cellId];
+          if (feature) {
             if (self.options.onCellHover) {
               self.options.onCellHover(feature);
             }
-          } else {
-            feature = null;
           }
         }
         if (self.options.hud && cellId) {
@@ -448,11 +445,13 @@
       // lowest 3 bytes represent the cell ID.
 
       var geojson = {
-         type: 'FeatureCollection',
-         features: []
+        type: 'FeatureCollection',
+        features: [],
+        _cache: {} // for quickly locating a feature by id
       };
 
       var typedArray = new Uint32Array(buff);
+
       for (var i=0; i<typedArray.length; i++) {
         var packed = typedArray[i];
         var cellId = packed & 0xfffff;
@@ -473,6 +472,7 @@
           }
         };
         geojson.features.push(feature);
+        geojson._cache[cellId] = feature;
       }
       return geojson;
     };
