@@ -28,21 +28,28 @@
     d3.range(179.9999,-179.9999,-1).map(function(x) {return [x, -89.9999];}),
     d3.range(-89.9999,89.9999).map(function(x) {return [-179.9999, x];}
   )];
+  var Grid = function(data, gridSize, bbox) {
+    // represents a gridded data set.  Unless bbox is supplied,
+    // it's assumed to have global coverage
+    this.data = data;
+    this.rows = gridSize[1];
+    this.cols = gridSize[0];
+    this.bbox = bbox; // optional, currently unused
+  };
 
-  var GridMap = function(container, gridSize, options) {
+  var GridMap = function(container, options) {
     var self = this;
 
     this.rotate_latitude = 0.0;
     this.rotate_longitude = 0.0;
-
-    this.gridCols = gridSize[0];
-    this.gridRows = gridSize[1];
 
     this.container = d3.select(container);
 
     var rect = this.container.node().getBoundingClientRect();
     this.width = rect.width;
     this.height = rect.height;
+
+    this.grids = [];
 
     this.options = options;
 
@@ -84,6 +91,7 @@
       .style('position', 'absolute')
       .style('top', '0px')
       .style('left', '0px')
+      .style('z-index', '2')
       .attr('width', this.width)
       .attr('height', this.height);
 
@@ -160,10 +168,14 @@
       var lon = coords[0];
       var lat = coords[1];
 
-      var row = ~~(this.gridRows - (lat + 90) / 180  * this.gridRows);
-      var col = ~~((lon + 180) / 360  * this.gridCols);
+      // FIXME: pick the active grid
+      var rows = self.grids[0].rows;
+      var cols = self.grids[0].cols;
 
-      var cellId = row * this.gridCols + col + 1;
+      var row = ~~(rows - (lat + 90) / 180  * rows);
+      var col = ~~((lon + 180) / 360  * cols);
+
+      var cellId = row * cols + col + 1;
       return cellId;
     };
 
@@ -256,12 +268,16 @@
           return;
         }
         var coords = self.projection.invert(d3.mouse(this));
+
+        if (!coords) {
+          return;
+        }
         var cellId = null;
         var feature = null;
 
-        if (self.geojson && coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
+        if (coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
           cellId = self.coordinatesToCellId(coords);
-          feature = self.geojson._cache[cellId];
+          //feature = self.geojson._cache[cellId];
           if (feature) {
             if (self.options.onCellHover) {
               self.options.onCellHover(feature);
@@ -335,6 +351,10 @@
           self.context.fillStyle = color;
           self.context.fill();
         });
+      } else if (self.grids.length >= 1) {
+        for (var i=0; i<self.grids.length; i++) {
+          self.drawData(self.grids[i]);
+        }
       }
     };
 
@@ -368,11 +388,14 @@
       this.draw();
     };
 
-    this.setData = function(data) {
+    this.setData = function(data, gridSize) {
       if (data.constructor === ArrayBuffer) {
-        this.setDataArrayBuffer(data);
-      } else if (data.constructor === UInt8ClampedArray) {
-        this.setDataUnsparseTypedArray(data);
+        var grid = this.arrayBufferToGrid(data, gridSize);
+        self.grids.push(grid);
+        self.draw();
+      } else if (data.constructor === Uint8ClampedArray) {
+        //this.setDataUnsparseTypedArray(data);
+        this.setDataArrayBuffer(data, gridSize);
       } else {
         // assume GeoJSON
         this.setDataGeoJSON(data);
@@ -383,10 +406,47 @@
       this.geojson = this.uInt8ArrayToGeoJSON(data);
       this.draw();
     };
-    this.setDataArrayBuffer = function (data) {
-      this.geojson = this.arrayBufferToGeoJSON(data);
-      this.draw();
+
+    this.setDataArrayBuffer = function (data, gridSize) {
+      var grid = new Grid(data, gridSize);
+      this.grids.push(grid);
     };
+
+    this.drawData = function(grid) {
+
+      var image = this.context.getImageData(0, 0, this.width, this.height);
+      var imageData = image.data;
+
+      for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this.width; x++) {
+          var p = this.projection.invert([x, y]);
+
+          if (!p) {
+            continue;
+          }
+
+          var λ = p[0];
+          var φ = p[1];
+
+          if (λ > 180 || λ < -180 || φ > 90 || φ < -90) {
+            continue;
+          }
+          var i = (x + this.width * y) * 4;
+          var q = ((90 - φ) / 180 * grid.rows | 0) * grid.cols + ((180 + λ) / 360 * grid.cols | 0);
+
+          if (grid.data[q*4+3] === 0) {
+            // skip where alpha is 0;
+            continue;
+          }
+          imageData[i] = grid.data[q*4];
+          imageData[i+1] = grid.data[q*4+1];
+          imageData[i+2] = grid.data[q*4+2];
+          imageData[i+3] = grid.data[q*4+3];
+        }
+      }
+      this.context.putImageData(image, 0, 0);
+    };
+
     this.setDataGeoJSON = function (data) {
       this.geojson = data;
       this.draw();
@@ -433,6 +493,37 @@
       }
 
       return geojson;
+    };
+
+    this.arrayBufferToGrid = function(buff, gridSize) {
+      // given an ArrayBuffer buff containing data in
+      // packed binary format, returns a Grid
+
+      // The packed binary format is expected to be
+      // a sequence of Uint32 elements in which the most
+      // significant byte is the cell value and the
+      // lowest 3 bytes represent the cell ID.
+
+      var w = gridSize[1];
+      var h = gridSize[0];
+
+      var data = new Uint8ClampedArray(w*h*4);
+
+      var typedArray = new Uint32Array(buff);
+
+      for (var i=0; i<typedArray.length; i++) {
+        var packed = typedArray[i];
+        var cellId = (packed & 0xfffff) << 2;
+        // unpack most significant byte, the data value.
+        // note the triple arrow, which fills in 0s instead of 1s.
+        var value = packed >>> 24;
+
+        data[cellId+0] = value;
+        data[cellId+1] = value;
+        data[cellId+2] = value;
+        data[cellId+3] = 255;
+      }
+      return new Grid(data,gridSize);
     };
 
     this.arrayBufferToGeoJSON = function(buff) {

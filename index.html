@@ -23,26 +23,24 @@
         <script src="https://cdn.rawgit.com/mbostock/topojson/master/topojson.js"></script>
         <script src="d3-grid-map.js"></script>
         <script type="text/javascript">
+
           var w = 720;
           var h = 360;
 
           // create a data grid of this size and position
-          var grid_w = 50;
-          var grid_h = 50;
-          var grid_ul_x = 200; //335;
-          var grid_ul_y = 100; //155;
 
-          var data = new Uint32Array(grid_w * grid_h);
+          var grid_ul_x = 0; //335;
+          var grid_ul_y = 0; //155;
+
+          var data = new Uint8ClampedArray(w * h * 4);
           var index = -1;
-          for (var j=0; j<grid_h; j++) {
-              for (var i=0; i<grid_w; i++) {
-                index++;
-                var cell_id = (grid_ul_y + j)*w + (grid_ul_x + i);
-
-                var cell_value = ~~(Math.random()*255);
-                var val = ((cell_value & 0xff) << 24) | (cell_id & 0xffffff);
-                data[index] = val;
-
+          for (var j=0; j<h; j++) {
+              for (var i=0; i<w; i++) {
+                var index = (i + j*w)*4;
+                data[index] = i/w*255;
+                data[index+1] = 0;
+                data[index+2] = 0;
+                data[index+3] = (Math.random()*255) | 0;
               }
           }
           d3.json('countries.topojson', function(error, countries) {
@@ -53,12 +51,15 @@
                 fontColor: 'white',
                 verticalOffset: 5
               },
+              projection: d3.geo.aitoff(),
               onCellHover: function(feature) { console.debug('hovering over ', feature);}
             };
 
-            var map1 = new d3.geo.GridMap('#map1', [w, h], options);
-            map1.setData(data.buffer);
+            var map1 = new d3.geo.GridMap('#map1', options);
+            map1.setData(data, [w,h]);
             map1.panToCentroid();
+
+/*
 
             options.projection = d3.geo.mercator();
             var map2 = new d3.geo.GridMap('#map2', [w, h], options);
@@ -73,6 +74,7 @@
             options.projection = d3.geo.airy();
             var map4 = new d3.geo.GridMap('#map4', [w, h], options);
             map3.setDataArrayBuffer(data.buffer);
+*/
           });
         </script>
     </body>

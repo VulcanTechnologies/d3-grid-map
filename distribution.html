@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <style type="text/css">
+            .map {
+                width: 700px;
+                height: 500px;
+                border: 1px solid black;
+                margin: 0px;
+                float: left;
+                position: relative;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="map" id="map1"></div>
+        <div class="map" id="map2"></div>
+        <div class="map" id="map3"></div>
+        <div class="map" id="map4"></div>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+        <script src="https://cdn.rawgit.com/d3/d3-geo-projection/master/d3.geo.projection.js"></script>
+        <script src="https://cdn.rawgit.com/mbostock/topojson/master/topojson.js"></script>
+        <script src="d3-grid-map.js"></script>
+        <script type="text/javascript">
+
+          var w = 720;
+          var h = 360;
+
+          d3.json('countries.topojson', function(error, countries) {
+            d3.xhr('http://recon.seaaroundus.org/distribution/taxon/100036')
+              .responseType('arraybuffer')
+              .get(function(err, data) {
+
+                var options = {
+                  countries: countries,
+                  hud: {
+                    fontSize: 20,
+                    fontColor: 'white',
+                    verticalOffset: 5
+                  },
+                  projection: d3.geo.aitoff(),
+                  onCellHover: function(feature) { console.debug('hovering over ', feature);}
+                };
+
+                var map1 = new d3.geo.GridMap('#map1', options);
+                map1.setData(data.response, [w,h]);
+                map1.panToCentroid();
+              });
+          });
+        </script>
+    </body>
+</html>
