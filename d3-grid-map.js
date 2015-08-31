@@ -4,9 +4,9 @@
 (function(){
   'use strict';
 
-  var defaultColorScale = d3.scale.quantize()
+  var defaultColorScale = d3.scale.linear()
     .domain([0,255])
-    .range(['#000', '#111', '#222', '#333', '#444', '#555', '#666', '#777', '#888', '#999', '#aaa', '#bbb', '#ccc', '#ddd', '#eee', '#fff']);
+    .range(['red', 'green']);
 
   var worldGeoJSON = {
     type: 'FeatureCollection',
@@ -28,6 +28,7 @@
     d3.range(179.9999,-179.9999,-1).map(function(x) {return [x, -89.9999];}),
     d3.range(-89.9999,89.9999).map(function(x) {return [-179.9999, x];}
   )];
+
   var Grid = function(data, gridSize, bbox) {
     // represents a gridded data set.  Unless bbox is supplied,
     // it's assumed to have global coverage
@@ -35,6 +36,12 @@
     this.rows = gridSize[1];
     this.cols = gridSize[0];
     this.bbox = bbox; // optional, currently unused
+  };
+
+  var Layer = function(zIndex) {
+    this.zIndex = zIndex;
+    this.geoJSON = null;
+    this.grid = null;
   };
 
   var GridMap = function(container, options) {
@@ -69,7 +76,7 @@
       }
     });
 
-    this.projection = options.projection || d3.geo.mollweide();
+    this.projection = options.projection || d3.geo.aitoff();
     this.projection
       .translate([this.width/2, this.height/2])
       .scale(this.width/6)
@@ -108,7 +115,7 @@
       .projection(this.projection)
       .context(this.context);
 
-    this.hud_path = d3.geo.path()
+    this.hudPath = d3.geo.path()
       .projection(this.projection)
       .context(this.hudContext);
 
@@ -120,44 +127,69 @@
 
     this.destroy = function() {
       this.canvas.remove();
+      this.hudCanvas.remove();
+      this.grids = [];
+      this.geojson = null;
     };
 
+    this.getCell = function(cellId) {
+      // return value if we have a grid and the grid contains a nonzero alpha channel from
+      // (RGBA) values
+      if (this.grids.length >= 1 && this.grids[0].data[cellId*4 + 3]) {
+        return this.grids[0].data[cellId*4];
+      }
+    };
 
-    this.cellIdToLonLat = function(cellId) {
+    this.cellIdToLonLat = function(cellId, grid) {
       /**
        * given a cellId, returns an array containing the [lon,lat] of the
        * upper left corner  points
        * @param {Number} cellId
        * @return {Array} coordinates
        */
-        var _id = cellId - 1;
-        var lon = -180 + (_id % this.gridCols)/this.gridCols * this.gridRows ;
-        var lat = 90 - (~~(_id / this.gridCols)) * (180 / this.gridRows);
-        return [lon, lat];
+
+      var rows = 360;
+      var cols = 720;
+      if (grid) {
+        rows = grid.rows;
+        cols = grid.cols;
+      }
+      var _id = cellId - 1;
+      var lon = -180 + (_id % cols)/cols * rows;
+      var lat = 90 - (~~(_id / cols)) * (180 / rows);
+      return [lon, lat];
     };
 
     this.cellCache = [];
 
-    this.cellIdToCoordinates = function(cellId) {
+    this.cellIdToCoordinates = function(cellId, grid) {
       /**
        * given a cellId, returns an array of arrays containing the [lon,lat] of the corner
        * points
        * @param {Number} cellId
+       * @param {Grid} grid to query, optional
        * @return {Array} coordinates
        */
 
       if (this.cellCache[cellId]) {
         return this.cellCache[cellId];
       }
-      var x_size = 360 / this.gridCols;
-      var y_size = 180 / this.gridRows;
 
-      var lonLat = this.cellIdToLonLat(cellId);
+      var rows = 360;
+      var cols = 720;
+      if (grid) {
+        rows = grid.rows;
+        cols = grid.cols;
+      }
+      var xSize = 360 / cols;
+      var ySize = 180 / rows;
+
+      var lonLat = this.cellIdToLonLat(cellId, grid);
       var coordinates = [
         lonLat,
-        [lonLat[0] + x_size, lonLat[1]],
-        [lonLat[0] + x_size, lonLat[1]-y_size],
-        [lonLat[0], lonLat[1]-y_size],
+        [lonLat[0] + xSize, lonLat[1]],
+        [lonLat[0] + xSize, lonLat[1] - ySize],
+        [lonLat[0], lonLat[1] - ySize],
         lonLat
       ];
       this.cellCache[cellId] = coordinates;
@@ -179,7 +211,7 @@
       return cellId;
     };
 
-    this.updateHUD = function(cellId, coords, feature) {
+    this.updateHUD = function(cellId, coords, cell) {
       var coordFormat = d3.format(' >+7.3f');
 
       var fontSize = self.options.hud.fontSize || 30;
@@ -201,18 +233,18 @@
 
       s = 'cell: ' + cellId + ' ( ' + coordFormat(coords[0]) + '°,' + coordFormat(coords[1]) + '° )';
 
-      if (!feature) {
-        var coordinates = self.cellIdToCoordinates(cellId);
+      var coordinates = self.cellIdToCoordinates(cellId, self.grids[0]);
 
-        feature = {
-          type: 'Feature',
-          geometry: {
-            type: 'Polygon',
-            coordinates: [coordinates]
-          },
-        };
-      } else {
-          s += ' value: ' + feature.properties.value;
+      var feature = {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [coordinates]
+        },
+      };
+
+      if (cell !== undefined) {
+        s += ' value: ' + cell;
       }
 
       self.hudContext.font = font;
@@ -222,7 +254,7 @@
       self.hudContext.beginPath();
       self.hudContext.strokeStyle = 'white';
       self.hudContext.lineWidth = 2;
-      self.hud_path(feature);
+      self.hudPath(feature);
       self.hudContext.stroke();
     };
 
@@ -273,19 +305,20 @@
           return;
         }
         var cellId = null;
-        var feature = null;
+        var cell = null;
 
         if (coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
           cellId = self.coordinatesToCellId(coords);
           //feature = self.geojson._cache[cellId];
-          if (feature) {
+          cell = self.getCell(cellId);
+          if (cell) {
             if (self.options.onCellHover) {
-              self.options.onCellHover(feature);
+              self.options.onCellHover(cell);
             }
           }
         }
         if (self.options.hud && cellId) {
-          self.updateHUD(cellId, coords, feature);
+          self.updateHUD(cellId, coords, cell);
         }
       });
     };
@@ -322,12 +355,7 @@
 
     };
 
-    this.draw = function(_geojson) {
-      if (_geojson) {
-        self.geojson = _geojson;
-      }
-
-      self.drawWorld();
+    this.drawGeoJSON = function(geojson) {
 
       self.context.beginPath();
       self.path(self.geojson);
@@ -335,25 +363,67 @@
       self.context.lineWidth = 0.5;
       self.context.stroke();
 
-      if (self.geojson && self.geojson.features) {
-        self.geojson.features.forEach(function(feature){
-          var color = null;
-          if (feature.properties.rgba) {
-            color = 'rgba(' + feature.properties.rgba.join(',') + ')';
-          } else {
-            color = self.colorScale(feature.properties.value);
+      self.geojson.features.forEach(function(feature){
+        var color = null;
+        if (feature.properties.rgba) {
+          color = 'rgba(' + feature.properties.rgba.join(',') + ')';
+        } else {
+          color = self.colorScale(feature.properties.value);
+        }
+        self.context.beginPath();
+        self.path(feature);
+        self.context.strokeStyle = self.geoJsonColor;
+        self.context.lineWidth = 0.5;
+        self.context.stroke();
+        self.context.fillStyle = color;
+        self.context.fill();
+      });
+    };
+
+    this.drawGrid = function(grid) {
+
+      var image = this.context.getImageData(0, 0, this.width, this.height);
+      var imageData = image.data;
+
+      for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this.width; x++) {
+          var p = this.projection.invert([x, y]);
+
+          if (!p) {
+            continue;
           }
-          self.context.beginPath();
-          self.path(feature);
-          self.context.strokeStyle = self.geoJsonColor;
-          self.context.lineWidth = 0.5;
-          self.context.stroke();
-          self.context.fillStyle = color;
-          self.context.fill();
-        });
+
+          var λ = p[0];
+          var φ = p[1];
+
+          if (λ > 180 || λ < -180 || φ > 90 || φ < -90) {
+            continue;
+          }
+          var i = (x + this.width * y) * 4;
+          var q = ((90 - φ) / 180 * grid.rows | 0) * grid.cols + ((180 + λ) / 360 * grid.cols | 0) + 1;
+
+          if (grid.data[q*4+3] === 0) {
+            // skip where alpha is 0;
+            continue;
+          }
+          imageData[i] = grid.data[q*4];
+          imageData[i+1] = grid.data[q*4+1];
+          imageData[i+2] = grid.data[q*4+2];
+          imageData[i+3] = grid.data[q*4+3];
+        }
+      }
+      this.context.putImageData(image, 0, 0);
+    };
+
+    this.draw = function() {
+
+      self.drawWorld();
+
+      if (self.geojson && self.geojson.features) {
+        self.drawGeoJSON(self.geojson);
       } else if (self.grids.length >= 1) {
         for (var i=0; i<self.grids.length; i++) {
-          self.drawData(self.grids[i]);
+          self.drawGrid(self.grids[i]);
         }
       }
     };
@@ -368,7 +438,7 @@
       };
     };
 
-    self.debouncedDraw = debounce(self.draw, 200);
+    self.debouncedDraw = debounce(self.draw, 500);
 
     this.resize = function() {
       this.width = parseInt(this.container.style('width'), 10);
@@ -392,67 +462,19 @@
       if (data.constructor === ArrayBuffer) {
         var grid = this.arrayBufferToGrid(data, gridSize);
         self.grids.push(grid);
-        self.draw();
       } else if (data.constructor === Uint8ClampedArray) {
-        //this.setDataUnsparseTypedArray(data);
-        this.setDataArrayBuffer(data, gridSize);
+        var grid = new Grid(data, gridSize);
+        this.grids.push(grid);
       } else {
         // assume GeoJSON
-        this.setDataGeoJSON(data);
+        this.geojson = data;
       }
-    };
-
-    this.setDataUnsparseTypedArray = function (data) {
-      this.geojson = this.uInt8ArrayToGeoJSON(data);
-      this.draw();
-    };
-
-    this.setDataArrayBuffer = function (data, gridSize) {
-      var grid = new Grid(data, gridSize);
-      this.grids.push(grid);
-    };
-
-    this.drawData = function(grid) {
-
-      var image = this.context.getImageData(0, 0, this.width, this.height);
-      var imageData = image.data;
-
-      for (var y = 0; y < this.height; y++) {
-        for (var x = 0; x < this.width; x++) {
-          var p = this.projection.invert([x, y]);
-
-          if (!p) {
-            continue;
-          }
-
-          var λ = p[0];
-          var φ = p[1];
-
-          if (λ > 180 || λ < -180 || φ > 90 || φ < -90) {
-            continue;
-          }
-          var i = (x + this.width * y) * 4;
-          var q = ((90 - φ) / 180 * grid.rows | 0) * grid.cols + ((180 + λ) / 360 * grid.cols | 0);
-
-          if (grid.data[q*4+3] === 0) {
-            // skip where alpha is 0;
-            continue;
-          }
-          imageData[i] = grid.data[q*4];
-          imageData[i+1] = grid.data[q*4+1];
-          imageData[i+2] = grid.data[q*4+2];
-          imageData[i+3] = grid.data[q*4+3];
-        }
-      }
-      this.context.putImageData(image, 0, 0);
-    };
-
-    this.setDataGeoJSON = function (data) {
-      this.geojson = data;
-      this.draw();
+      self.draw();
     };
 
     this.uInt8ArrayToGeoJSON = function(array) {
+      console.debug('uInt8ArrayToGeoJSON is deprecated. Use setData');
+
       // given a UInt8ClampedArray containing data in
       // RGBA format, returns GeoJSON
 
@@ -518,10 +540,13 @@
         // note the triple arrow, which fills in 0s instead of 1s.
         var value = packed >>> 24;
 
-        data[cellId+0] = value;
-        data[cellId+1] = value;
-        data[cellId+2] = value;
-        data[cellId+3] = 255;
+        var color = d3.rgb(self.colorScale(value));
+        var alpha = 255;
+
+        data[cellId+0] = color.r;
+        data[cellId+1] = color.g;
+        data[cellId+2] = color.b;
+        data[cellId+3] = alpha;
       }
       return new Grid(data,gridSize);
     };
