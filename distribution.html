@@ -33,7 +33,6 @@
               .get(function(err, data) {
 
                 var options = {
-                  countries: countries,
                   hud: {
                     fontSize: 20,
                     fontColor: 'white',
@@ -44,8 +43,20 @@
                 };
 
                 var map1 = new d3.geo.GridMap('#map1', options);
-                map1.setData(data.response, [w,h]);
-                map1.panToCentroid();
+
+                // add countries layer
+                var countryOptions = {
+                  fillColor: 'rgba(237,178,48,1)',
+                  strokeColor: 'rgba(100,100,100,.8)'
+                };
+                map1.setData(countries, countryOptions);
+
+                // add data layer
+                var gridOptions = {
+                  gridSize: [w,h]
+                };
+                map1.setData(data.response, gridOptions);
+
               });
           });
         </script>

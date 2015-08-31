@@ -4,9 +4,10 @@
 (function(){
   'use strict';
 
-  var defaultColorScale = d3.scale.linear()
+  var defaultColorScale = d3.scale.quantize()
     .domain([0,255])
-    .range(['red', 'green']);
+    .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
+    // RdYlGn[10]
 
   var worldGeoJSON = {
     type: 'FeatureCollection',
@@ -38,17 +39,18 @@
     this.bbox = bbox; // optional, currently unused
   };
 
-  var Layer = function(zIndex) {
-    this.zIndex = zIndex;
-    this.geoJSON = null;
+  var Layer = function(options) {
+    this.zIndex = options ? options.zIndex : 1;
+    this.options = options || {strokeColor: 'rgba(100,100,100,.8)', fillColor: 'rgba(237,178,48,1)'};
+    this.geojson = null;
     this.grid = null;
   };
 
   var GridMap = function(container, options) {
     var self = this;
 
-    this.rotate_latitude = 0.0;
-    this.rotate_longitude = 0.0;
+    this.rotateLatitude = 0.0;
+    this.rotateLongitude = 0.0;
 
     this.container = d3.select(container);
 
@@ -57,14 +59,12 @@
     this.height = rect.height;
 
     this.grids = [];
+    this.layers = [];
 
     this.options = options;
 
-    this.landColor = options.landColor || 'rgba(237,178,48,1)';
     this.seaColor = options.seaColor || 'rgba(21,98,180,.8)';
-    this.landOutlineColor = options.landOutlineColor || 'rgba(100,100,100,.8)';
     this.graticuleColor = options.graticuleColor || 'rgba(100,100,100,.3)';
-    this.geoJsonColor = options.geoJsonColor || 'rgba(0,0,0,1)';
 
     self.area = 1; // minimum area threshold for simplification
 
@@ -83,13 +83,11 @@
       .clipExtent([[0, 0], [self.width, self.height]])
       .precision(0.1);
 
-    topojson.presimplify(options.countries);
     this.canvas = this.container
       .append('canvas')
       .style('position', 'absolute')
       .style('top', '0px')
       .style('left', '0px')
-      .datum(topojson.feature(options.countries, options.countries.objects.countries))
       .attr('width', this.width)
       .attr('height', this.height);
 
@@ -135,8 +133,10 @@
     this.getCell = function(cellId) {
       // return value if we have a grid and the grid contains a nonzero alpha channel from
       // (RGBA) values
-      if (this.grids.length >= 1 && this.grids[0].data[cellId*4 + 3]) {
-        return this.grids[0].data[cellId*4];
+      var grid = this.getGrid();
+
+      if (grid && grid.data[cellId*4 + 3]) {
+        return grid.data[cellId*4];
       }
     };
 
@@ -196,13 +196,28 @@
       return coordinates;
     };
 
+    this.getGrid = function() {
+      /**
+       * returns 'the' grid
+       */
+
+      // FIXME: is picking the first grid good enough?
+      var grid = null;
+      for (var i=0; i < this.layers.length; i++) {
+        if (this.layers[i].grid) {
+          return this.layers[i].grid;
+        }
+      }
+    };
+
     this.coordinatesToCellId = function(coords) {
       var lon = coords[0];
       var lat = coords[1];
 
-      // FIXME: pick the active grid
-      var rows = self.grids[0].rows;
-      var cols = self.grids[0].cols;
+      var grid = this.getGrid();
+
+      var rows = grid.rows;
+      var cols = grid.cols;
 
       var row = ~~(rows - (lat + 90) / 180  * rows);
       var col = ~~((lon + 180) / 360  * cols);
@@ -265,10 +280,11 @@
         .on('dragstart', function () {
         })
         .on('drag', function () {
-          self.rotate_longitude += 100 * d3.event.dx / zoom.scale();
-          self.rotate_latitude -= 100 * d3.event.dy / zoom.scale();
-          self.projection.rotate([self.rotate_longitude, self.rotate_latitude]);
+          self.rotateLongitude += 100 * d3.event.dx / zoom.scale();
+          self.rotateLatitude -= 100 * d3.event.dy / zoom.scale();
+          self.projection.rotate([self.rotateLongitude, self.rotateLatitude]);
           self.drawWorld();
+          self.drawGraticule()
         })
         .on('dragend', function () {
           self.debouncedDraw();
@@ -288,6 +304,7 @@
           self.area = 20000 / scale / scale;
           self.projection.scale(scale);
           self.drawWorld();
+          self.drawGraticule()
         })
         .scale(this.width/6)
         .scaleExtent([this.width/6, 2000]);
@@ -309,7 +326,6 @@
 
         if (coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
           cellId = self.coordinatesToCellId(coords);
-          //feature = self.geojson._cache[cellId];
           cell = self.getCell(cellId);
           if (cell) {
             if (self.options.onCellHover) {
@@ -334,50 +350,18 @@
       this.context.closePath();
       this.context.fillStyle = this.seaColor;
       this.context.fill();
-
-      // draw countries
-      this.context.beginPath();
-      this.canvas.each(this.simplifyingPath);
-      this.context.closePath();
-      this.context.strokeStyle = this.landOutlineColor;
-      this.context.lineWidth = 1;
-      this.context.stroke();
-      this.context.fillStyle = this.landColor;
-      this.context.fill();
-
-      // overlay graticule
-      this.context.beginPath();
-      this.path(graticule);
-      this.context.closePath();
-      this.context.lineWidth = 1;
-      this.context.strokeStyle = this.graticuleColor;
-      this.context.stroke();
-
     };
 
-    this.drawGeoJSON = function(geojson) {
+    this.drawGeoJSONLayer = function(layer) {
 
       self.context.beginPath();
-      self.path(self.geojson);
-      self.context.strokeStyle = self.geoJsonColor;
+      self.simplifyingPath(layer.geojson);
+      self.context.strokeStyle = layer.options.strokeColor;
       self.context.lineWidth = 0.5;
       self.context.stroke();
 
-      self.geojson.features.forEach(function(feature){
-        var color = null;
-        if (feature.properties.rgba) {
-          color = 'rgba(' + feature.properties.rgba.join(',') + ')';
-        } else {
-          color = self.colorScale(feature.properties.value);
-        }
-        self.context.beginPath();
-        self.path(feature);
-        self.context.strokeStyle = self.geoJsonColor;
-        self.context.lineWidth = 0.5;
-        self.context.stroke();
-        self.context.fillStyle = color;
-        self.context.fill();
-      });
+      self.context.fillStyle = layer.options.fillColor;
+      self.context.fill();
     };
 
     this.drawGrid = function(grid) {
@@ -415,30 +399,58 @@
       this.context.putImageData(image, 0, 0);
     };
 
+    this.drawGraticule = function() {
+      this.context.beginPath();
+      this.path(graticule);
+      this.context.closePath();
+      this.context.lineWidth = 1;
+      this.context.strokeStyle = this.graticuleColor;
+      this.context.stroke();
+    };
+
     this.draw = function() {
+
+      /**
+        * clears the canvas,
+        * draws the background
+        * draws data layers
+        * draws graticule
+        */
 
       self.drawWorld();
 
-      if (self.geojson && self.geojson.features) {
-        self.drawGeoJSON(self.geojson);
-      } else if (self.grids.length >= 1) {
-        for (var i=0; i<self.grids.length; i++) {
-          self.drawGrid(self.grids[i]);
+      for (var i=0; i<self.layers.length; i++) {
+        var layer = self.layers[i];
+
+        if (layer.geojson) {
+          self.drawGeoJSONLayer(layer);
+        } else if (layer.grid) {
+          self.drawGrid(layer.grid);
         }
       }
+
+      self.drawGraticule();
     };
+
+    var debounceLock = false;
 
     var debounce = function(fn, timeout) {
       var timeoutID = -1;
       return function() {
+        if (debounceLock) {
+          console.log('debounce contention');
+          return;
+        }
+        debounceLock = true;
         if (timeoutID > -1) {
           window.clearTimeout(timeoutID);
         }
         timeoutID = window.setTimeout(fn, timeout);
+        debounceLock = false;
       };
     };
 
-    self.debouncedDraw = debounce(self.draw, 500);
+    self.debouncedDraw = debounce(self.draw, 100);
 
     this.resize = function() {
       this.width = parseInt(this.container.style('width'), 10);
@@ -458,17 +470,27 @@
       this.draw();
     };
 
-    this.setData = function(data, gridSize) {
+    this.setData = function(data, options) {
+      var layer = new Layer(options);
+
       if (data.constructor === ArrayBuffer) {
-        var grid = this.arrayBufferToGrid(data, gridSize);
-        self.grids.push(grid);
+        var grid = this.arrayBufferToGrid(data, options.gridSize);
+        layer.grid = grid;
       } else if (data.constructor === Uint8ClampedArray) {
-        var grid = new Grid(data, gridSize);
-        this.grids.push(grid);
+        var grid = new Grid(data, options.gridSize);
+        layer.grid = grid;
       } else {
         // assume GeoJSON
-        this.geojson = data;
+        if (data.type === 'Topology') {
+          // it is topojson
+          topojson.presimplify(data);
+          // FIXME: this isn't good.  hardcoded assuming only countries data
+          // and immediately converting topojson to geojson.
+          data = topojson.feature(data, data.objects.countries);
+        }
+        layer.geojson = data;
       }
+      self.layers.push(layer);
       self.draw();
     };
 
@@ -548,7 +570,7 @@
         data[cellId+2] = color.b;
         data[cellId+3] = alpha;
       }
-      return new Grid(data,gridSize);
+      return new Grid(data, gridSize);
     };
 
     this.arrayBufferToGeoJSON = function(buff) {
