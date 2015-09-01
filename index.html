@@ -53,6 +53,8 @@
             var map1 = new d3.geo.GridMap('#map1', options);
             map1.setData(countries);
             map1.setData(data, {gridSize: [w,h]});
+            map1.dispatch.on('drawStart', function() {console.debug('drawing Started'); });
+            map1.dispatch.on('drawEnd', function() {console.debug('drawing Ended'); });
 
             options.projection = d3.geo.mercator();
             var map2 = new d3.geo.GridMap('#map2', options);

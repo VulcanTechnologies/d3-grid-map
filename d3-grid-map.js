@@ -424,6 +424,8 @@
       }
     };
 
+    this.dispatch = d3.dispatch('drawStart', 'drawEnd');
+
     this._draw = function() {
 
       /**
@@ -432,6 +434,8 @@
         * draws data layers
         * draws graticule
         */
+
+      self.dispatch.drawStart();
 
       self.drawWorld();
 
@@ -446,6 +450,8 @@
       }
 
       self.drawGraticule();
+
+      self.dispatch.drawEnd();
     };
 
     var debounceLock = false;
