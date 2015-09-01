@@ -284,6 +284,7 @@
           self.rotateLatitude -= 100 * d3.event.dy / zoom.scale();
           self.projection.rotate([self.rotateLongitude, self.rotateLatitude]);
           self.drawWorld();
+          self.drawGeoJSONLayers();
           self.drawGraticule()
         })
         .on('dragend', function () {
@@ -304,6 +305,7 @@
           self.area = 20000 / scale / scale;
           self.projection.scale(scale);
           self.drawWorld();
+          self.drawGeoJSONLayers();
           self.drawGraticule()
         })
         .scale(this.width/6)
@@ -406,6 +408,16 @@
       this.context.lineWidth = 1;
       this.context.strokeStyle = this.graticuleColor;
       this.context.stroke();
+    };
+
+    this.drawGeoJSONLayers = function() {
+      for (var i=0; i<self.layers.length; i++) {
+        var layer = self.layers[i];
+
+        if (layer.geojson) {
+          self.drawGeoJSONLayer(layer);
+        }
+      }
     };
 
     this.draw = function() {
