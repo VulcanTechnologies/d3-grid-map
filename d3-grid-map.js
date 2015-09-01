@@ -64,7 +64,7 @@
     this.options = options;
 
     this.seaColor = options.seaColor || 'rgba(21,98,180,.8)';
-    this.graticuleColor = options.graticuleColor || 'rgba(100,100,100,.3)';
+    this.graticuleColor = options.graticuleColor || 'rgba(255,255,255,.3)';
 
     self.area = 1; // minimum area threshold for simplification
 
@@ -387,11 +387,9 @@
           }
           var i = (x + this.width * y) * 4;
 
-          // 1.5 isn't a magic number like Carmack's 0x5f3759df.
-          // Add 0.5 so that our "~~" floor equivalent becomes
-          // round().  Add 1 because cell IDs are defined to be 1-based instead
+          // Add 1 because cell IDs are defined to be 1-based instead
           // of our 0-based arrays.
-          var q = ~~((~~((90 - φ) / 180 * grid.rows) * grid.cols + (180 + λ) / 360 * grid.cols + 1.5));
+          var q = ~~((~~((90 - φ) / 180 * grid.rows) * grid.cols + (180 + λ) / 360 * grid.cols + 1.0));
 
           if (grid.data[q*4+3] === 0) {
             // skip where alpha is 0;
