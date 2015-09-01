@@ -4,11 +4,10 @@
         <meta charset='utf-8'>
         <style type="text/css">
             .map {
-                width: 700px;
+                width: 100%;
                 height: 500px;
                 border: 1px solid black;
                 margin: 0px;
-                float: left;
                 position: relative;
             }
         </style>
@@ -27,25 +26,21 @@
           var w = 720;
           var h = 360;
 
-          // create a data grid of this size and position
-
-          var grid_ul_x = 0; //335;
-          var grid_ul_y = 0; //155;
-
           var data = new Uint8ClampedArray(w * h * 4);
           var index = -1;
           for (var j=0; j<h; j++) {
               for (var i=0; i<w; i++) {
                 var index = (i + j*w)*4;
-                data[index] = i/w*255;
-                data[index+1] = 0;
-                data[index+2] = 0;
-                data[index+3] = (Math.random()*255) | 0;
+                if (index > 4*100000 && index < 4*120000) {
+                  data[index] = i/w*255;
+                  data[index+1] = 0;
+                  data[index+2] = 0;
+                  data[index+3] = i % 255;
+                }
               }
           }
           d3.json('countries.topojson', function(error, countries) {
             var options = {
-              countries: countries,
               hud: {
                 fontSize: 20,
                 fontColor: 'white',
@@ -56,25 +51,18 @@
             };
 
             var map1 = new d3.geo.GridMap('#map1', options);
-            map1.setData(data, [w,h]);
-            map1.panToCentroid();
-
-/*
+            map1.setData(countries);
+            map1.setData(data, {gridSize: [w,h]});
 
             options.projection = d3.geo.mercator();
-            var map2 = new d3.geo.GridMap('#map2', [w, h], options);
-            map2.setDataArrayBuffer(data.buffer);
-            map2.panToCentroid();
+            var map2 = new d3.geo.GridMap('#map2', options);
+            map2.setData(countries);
+            map2.setData(data, {gridSize: [w,h]});
 
             options.projection = d3.geo.orthographic().clipAngle(90);
-            var map3 = new d3.geo.GridMap('#map3', [w, h], options);
-            map3.setDataArrayBuffer(data.buffer);
-            map3.panToCentroid();
-
-            options.projection = d3.geo.airy();
-            var map4 = new d3.geo.GridMap('#map4', [w, h], options);
-            map3.setDataArrayBuffer(data.buffer);
-*/
+            var map3 = new d3.geo.GridMap('#map3', options);
+            map3.setData(countries);
+            map3.setData(data.buffer, {gridSize: [w,h]});
           });
         </script>
     </body>

@@ -55,8 +55,8 @@
     this.container = d3.select(container);
 
     var rect = this.container.node().getBoundingClientRect();
-    this.width = rect.width;
-    this.height = rect.height;
+    this.width = rect.width | 0;
+    this.height = rect.height | 0;
 
     this.grids = [];
     this.layers = [];
@@ -88,8 +88,8 @@
       .style('position', 'absolute')
       .style('top', '0px')
       .style('left', '0px')
-      .attr('width', this.width)
-      .attr('height', this.height);
+      .attr('width', self.width)
+      .attr('height', self.height);
 
     this.hud = this.container
       .append('canvas')
@@ -97,8 +97,8 @@
       .style('top', '0px')
       .style('left', '0px')
       .style('z-index', '2')
-      .attr('width', this.width)
-      .attr('height', this.height);
+      .attr('width', self.width)
+      .attr('height', self.height);
 
     this.context = this.canvas.node().getContext('2d');
     this.hudContext = this.hud.node().getContext('2d');
@@ -119,8 +119,6 @@
 
     this.init = function() {
       this.initEvents();
-      d3.select(window).on('resize', this.resize.bind(this));
-      this.draw();
     };
 
     this.destroy = function() {
@@ -273,6 +271,31 @@
       self.hudContext.stroke();
     };
 
+    this.onMouseMove = function() {
+      if (!self.options.onCellHover && !self.options.hud) {
+        return;
+      }
+      var coords = self.projection.invert(d3.mouse(this));
+
+      if (!coords) {
+        return;
+      }
+      var cellId = null;
+      var cell = null;
+
+      if (coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
+        cellId = self.coordinatesToCellId(coords);
+        cell = self.getCell(cellId);
+        if (cell) {
+          if (self.options.onCellHover) {
+            self.options.onCellHover(cell);
+          }
+        }
+      }
+      if (self.options.hud && cellId) {
+        self.updateHUD(cellId, coords, cell);
+      }
+    }
     this.initEvents = function() {
 
       var scale = 150;
@@ -285,17 +308,18 @@
           self.projection.rotate([self.rotateLongitude, self.rotateLatitude]);
           self.drawWorld();
           self.drawGeoJSONLayers();
-          self.drawGraticule()
+          self.drawGraticule();
+          self.draw();
         })
         .on('dragend', function () {
-          self.debouncedDraw();
+          self.draw();
         });
 
       var zoom = d3.behavior.zoom()
         .on('zoomstart', function() {
         })
         .on('zoomend', function() {
-          self.debouncedDraw();
+          self.draw();
         })
         .on('zoom', function(d) {
           if (zoom.scale() >= 2000 || zoom.scale() <= self.width/6) {
@@ -306,7 +330,8 @@
           self.projection.scale(scale);
           self.drawWorld();
           self.drawGeoJSONLayers();
-          self.drawGraticule()
+          self.drawGraticule();
+          self.draw();
         })
         .scale(this.width/6)
         .scaleExtent([this.width/6, 2000]);
@@ -314,31 +339,8 @@
       this.container.call(drag);
       this.container.call(zoom);
 
-      this.container.on('mousemove', function() {
-        if (!self.options.onCellHover && !self.options.hud) {
-          return;
-        }
-        var coords = self.projection.invert(d3.mouse(this));
-
-        if (!coords) {
-          return;
-        }
-        var cellId = null;
-        var cell = null;
-
-        if (coords[0] && coords[1] && coords[0] > -180 && coords[0] < 180 && coords[1] > -90 && coords[1] < 90) {
-          cellId = self.coordinatesToCellId(coords);
-          cell = self.getCell(cellId);
-          if (cell) {
-            if (self.options.onCellHover) {
-              self.options.onCellHover(cell);
-            }
-          }
-        }
-        if (self.options.hud && cellId) {
-          self.updateHUD(cellId, coords, cell);
-        }
-      });
+      this.container.on('mousemove', self.onMouseMove);
+      d3.select(window).on('resize', self.resize);
     };
 
     var graticule = d3.geo.graticule()();
@@ -401,7 +403,7 @@
           imageData[i+3] = grid.data[q*4+3];
         }
       }
-      this.context.putImageData(image, 0, 0);
+      self.context.putImageData(image, 0, 0);
     };
 
     this.drawGraticule = function() {
@@ -416,14 +418,13 @@
     this.drawGeoJSONLayers = function() {
       for (var i=0; i<self.layers.length; i++) {
         var layer = self.layers[i];
-
         if (layer.geojson) {
           self.drawGeoJSONLayer(layer);
         }
       }
     };
 
-    this.draw = function() {
+    this._draw = function() {
 
       /**
         * clears the canvas,
@@ -465,24 +466,27 @@
       };
     };
 
-    self.debouncedDraw = debounce(self.draw, 100);
+    self.draw = debounce(self._draw, 500);
 
-    this.resize = function() {
-      this.width = parseInt(this.container.style('width'), 10);
-      this.canvas.attr('width', this.width);
-      this.hud.attr('width', this.width);
-      this.projection
-        .translate([this.width/2, this.height/2])
-        .clipExtent([[0, 0], [this.width, this.height]]);
-      this.draw();
+    this._resize = function() {
+      self.width = parseInt(self.container.style('width'), 10);
+      self.canvas.attr('width', self.width);
+      self.hud.attr('width', self.width);
+      self.projection
+        .translate([self.width/2, self.height/2])
+        .clipExtent([[0, 0], [self.width, self.height]]);
+      self.draw();
     };
 
+    this.resize = debounce(self._resize, 200);
+
     this.panToCentroid = function() {
+      console.debug('panToCentroid needs updating');
+      return;
       var centroid = d3.geo.centroid(this.geojson);
       var rotation = this.projection.rotate();
       rotation[0] = -centroid[0]; // note the '-'
       this.projection.rotate(rotation);
-      this.draw();
     };
 
     this.setData = function(data, options) {
