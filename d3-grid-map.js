@@ -4,6 +4,13 @@
 (function(){
   'use strict';
 
+  try {
+    /* fake it for IE10 */
+    new Uint8ClampedArray();
+  } catch (e) {
+    window.Uint8ClampedArray = Uint8Array;
+  }
+
   var defaultColorScale = d3.scale.quantize()
     .domain([0,255])
     .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
@@ -235,8 +242,8 @@
       var font = fontSize + 'px ' + fontFace;
       var h = fontSize + verticalOffset;
       var gradient = self.hudContext.createLinearGradient(0,self.height-h,0,self.height);
-      gradient.addColorStop(0, 'rgba(0,0,0,0.0');
-      gradient.addColorStop(1, 'rgba(0,0,0,1.0');
+      gradient.addColorStop(0, 'rgba(0,0,0,0.0)');
+      gradient.addColorStop(1, 'rgba(0,0,0,1.0)');
 
       self.hudContext.clearRect(0, 0, self.width, self.height);
       self.hudContext.fillStyle = gradient;
@@ -501,7 +508,7 @@
       if (data.constructor === ArrayBuffer) {
         var grid = this.arrayBufferToGrid(data, options.gridSize);
         layer.grid = grid;
-      } else if (data.constructor === Uint8ClampedArray) {
+      } else if (data.constructor === Uint8Array || data.constructor === Uint8ClampedArray) {
         var grid = new Grid(data, options.gridSize);
         layer.grid = grid;
       } else {
