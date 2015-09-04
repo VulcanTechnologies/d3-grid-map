@@ -650,6 +650,43 @@
       return geojson;
     };
 
+    this.zoomTo = function (newScale) {
+      self.area = 20000 / newScale / newScale;
+      self.projection.scale(newScale);
+      self.drawWorld();
+      self.drawGeoJSONLayers();
+      self.drawGraticule();
+      self.draw();
+    };
+
+    this.zoomIn = function() {
+      self.options.zoomLevels.sort(function(a, b) {
+        return a-b;
+      });
+
+      var currentZoom = self.projection.scale();
+      for (var i = 0; i < self.options.zoomLevels.length; i++) {
+        if (self.options.zoomLevels[i] > currentZoom) {
+          self.zoomTo(self.options.zoomLevels[i]);
+          return;
+        }
+      }
+    };
+
+    this.zoomOut = function() {
+      self.options.zoomLevels.sort(function(a, b) {
+        return a-b;
+      });
+
+      var currentZoom = self.projection.scale();
+      for (var i = self.options.zoomLevels.length - 1; i >= 0; i--) {
+        if (self.options.zoomLevels[i] < currentZoom) {
+          self.zoomTo(self.options.zoomLevels[i]);
+          return;
+        }
+      }
+    };
+
     this.init();
   };
 
