@@ -310,8 +310,8 @@
         .on('dragstart', function () {
         })
         .on('drag', function () {
-          self.rotateLongitude += 100 * d3.event.dx / zoom.scale();
-          self.rotateLatitude -= 100 * d3.event.dy / zoom.scale();
+          self.rotateLongitude += 100 * d3.event.dx / scale;
+          self.rotateLatitude -= 100 * d3.event.dy / scale;
           self.projection.rotate([self.rotateLongitude, self.rotateLatitude]);
           self.drawWorld();
           self.drawGeoJSONLayers();
@@ -322,9 +322,8 @@
           self.draw();
         });
 
-      var zoom;
       if (!self.options.disableMouseZoom) {
-        zoom = d3.behavior.zoom()
+        var zoom = d3.behavior.zoom()
           .on('zoomstart', function() {
           })
           .on('zoomend', function() {
