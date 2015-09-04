@@ -322,29 +322,33 @@
           self.draw();
         });
 
-      var zoom = d3.behavior.zoom()
-        .on('zoomstart', function() {
-        })
-        .on('zoomend', function() {
-          self.draw();
-        })
-        .on('zoom', function(d) {
-          if (zoom.scale() >= 2000 || zoom.scale() <= self.width/6) {
-            return;
-          }
-          scale = d3.event.scale;
-          self.area = 20000 / scale / scale;
-          self.projection.scale(scale);
-          self.drawWorld();
-          self.drawGeoJSONLayers();
-          self.drawGraticule();
-          self.draw();
-        })
-        .scale(this.width/6)
-        .scaleExtent([this.width/6, 2000]);
+      var zoom;
+      if (!self.options.disableMouseZoom) {
+        zoom = d3.behavior.zoom()
+          .on('zoomstart', function() {
+          })
+          .on('zoomend', function() {
+            self.draw();
+          })
+          .on('zoom', function(d) {
+            if (zoom.scale() >= 2000 || zoom.scale() <= self.width/6) {
+              return;
+            }
+            scale = d3.event.scale;
+            self.area = 20000 / scale / scale;
+            self.projection.scale(scale);
+            self.drawWorld();
+            self.drawGeoJSONLayers();
+            self.drawGraticule();
+            self.draw();
+          })
+          .scale(this.width/6)
+          .scaleExtent([this.width/6, 2000]);
+
+        this.container.call(zoom);
+      }
 
       this.container.call(drag);
-      this.container.call(zoom);
 
       this.container.on('mousemove', self.onMouseMove);
       d3.select(window).on('resize', self.resize);
