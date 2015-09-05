@@ -112,6 +112,10 @@
 
     this.colorScale = options.colorScale || defaultColorScale;
 
+    if (!this.options.zoomLevels) {
+      this.options.zoomLevels = [1, 2, 4, 8];
+    }
+
     this.simplifyingPath = d3.geo.path()
       .projection({stream: function(s) {return simplify.stream(self.projection.stream(s));}})
       .context(this.context);
@@ -666,8 +670,8 @@
 
       var currentZoom = self.projection.scale();
       for (var i = 0; i < self.options.zoomLevels.length; i++) {
-        if (self.options.zoomLevels[i] > currentZoom) {
-          self.zoomTo(self.options.zoomLevels[i]);
+        if (self.options.zoomLevels[i] * 150 > currentZoom) {
+          self.zoomTo(self.options.zoomLevels[i] * 150);
           return;
         }
       }
@@ -680,8 +684,8 @@
 
       var currentZoom = self.projection.scale();
       for (var i = self.options.zoomLevels.length - 1; i >= 0; i--) {
-        if (self.options.zoomLevels[i] < currentZoom) {
-          self.zoomTo(self.options.zoomLevels[i]);
+        if (self.options.zoomLevels[i] * 150 < currentZoom) {
+          self.zoomTo(self.options.zoomLevels[i] * 150);
           return;
         }
       }
