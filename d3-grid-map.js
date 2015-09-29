@@ -49,6 +49,9 @@
   var Layer = function(options) {
     this.zIndex = options ? options.zIndex : 1;
     this.options = options || {strokeColor: 'rgba(100,100,100,.8)', fillColor: 'rgba(237,178,48,1)'};
+    if (!this.options.hasOwnProperty('renderOnAnimate')) {
+      this.options.renderOnAnimate = true;
+    }
     this.geojson = null;
     this.grid = null;
   };
@@ -317,10 +320,7 @@
           self.rotateLongitude += 100 * d3.event.dx / scale;
           self.rotateLatitude -= 100 * d3.event.dy / scale;
           self.projection.rotate([self.rotateLongitude, self.rotateLatitude]);
-          self.drawWorld();
-          self.drawGeoJSONLayers();
-          self.drawGraticule();
-          self.draw();
+          self.drawAnimation();
         })
         .on('dragend', function () {
           self.draw();
@@ -340,10 +340,7 @@
             scale = d3.event.scale;
             self.area = 20000 / scale / scale;
             self.projection.scale(scale);
-            self.drawWorld();
-            self.drawGeoJSONLayers();
-            self.drawGraticule();
-            self.draw();
+            self.drawAnimation();
           })
           .scale(this.width/6)
           .scaleExtent([this.width/6, 2000]);
@@ -373,7 +370,7 @@
     this.drawGeoJSONLayer = function(layer) {
 
       self.context.beginPath();
-      self.simplifyingPath(layer.geojson);
+      self.path(layer.geojson);
       self.context.strokeStyle = layer.options.strokeColor;
       self.context.lineWidth = 0.5;
       self.context.stroke();
@@ -381,6 +378,18 @@
       self.context.fillStyle = layer.options.fillColor;
       self.context.fill();
     };
+
+    this.drawTopoJSONLayer = function (layer) {
+
+      self.context.beginPath();
+      self.simplifyingPath(layer.geojson);
+      self.context.strokeStyle = layer.options.strokeColor;
+      self.context.lineWidth = 0.5;
+      self.context.stroke();
+
+      self.context.fillStyle = layer.options.fillColor;
+      self.context.fill();
+    }
 
     this.drawGrid = function(grid) {
 
@@ -429,43 +438,43 @@
       this.context.stroke();
     };
 
-    this.drawGeoJSONLayers = function() {
-      for (var i=0; i<self.layers.length; i++) {
+    this.drawLayers = function (animating) {
+      for (var i = 0; i < self.layers.length; i++) {
         var layer = self.layers[i];
-        if (layer.geojson) {
-          self.drawGeoJSONLayer(layer);
+        var doRender = !animating || layer.options.renderOnAnimate;
+        if (doRender) {
+          if (layer.grid) {
+            self.drawGrid(layer.grid);
+          } else if (layer.geojson) {
+            if (layer.geojson.type === 'Topology') {
+              self.drawTopoJSONLayer(layer);
+            } else {
+              self.drawGeoJSONLayer(layer);
+            }
+          }
         }
       }
-    };
+    }
 
     this.dispatch = d3.dispatch('drawStart', 'drawEnd');
 
     this._draw = function() {
 
-      /**
-        * clears the canvas,
-        * draws the background
-        * draws data layers
-        * draws graticule
-        */
-
       self.dispatch.drawStart();
 
       self.drawWorld();
-
-      for (var i=0; i<self.layers.length; i++) {
-        var layer = self.layers[i];
-
-        if (layer.geojson) {
-          self.drawGeoJSONLayer(layer);
-        } else if (layer.grid) {
-          self.drawGrid(layer.grid);
-        }
-      }
-
+      self.drawLayers();
       self.drawGraticule();
 
       self.dispatch.drawEnd();
+    };
+
+    this.drawAnimation = function () {
+      var animating = true;
+
+      self.drawWorld();
+      self.drawLayers(animating);
+      self.drawGraticule();
     };
 
     var debounceLock = false;
@@ -519,7 +528,7 @@
         var grid = new Grid(data, options.gridSize);
         layer.grid = grid;
       } else {
-        // assume GeoJSON
+        // assume JSON
         if (data.type === 'Topology') {
           // it is topojson
           topojson.presimplify(data);
@@ -531,6 +540,8 @@
       }
       self.layers.push(layer);
       self.draw();
+
+      return layer;
     };
 
     this.uInt8ArrayToGeoJSON = function(array) {
@@ -657,9 +668,6 @@
     this.zoomTo = function (newScale) {
       self.area = 20000 / newScale / newScale;
       self.projection.scale(newScale);
-      self.drawWorld();
-      self.drawGeoJSONLayers();
-      self.drawGraticule();
       self.draw();
     };
 
