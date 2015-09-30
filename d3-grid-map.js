@@ -46,13 +46,12 @@
   };
 
   var Layer = function(options) {
-    this.zIndex = options ? options.zIndex : 1;
-    this.options = options || {strokeColor: 'rgba(100,100,100,.8)', fillColor: 'rgba(237,178,48,1)'};
+    this.options = options || {};
+    this.options.strokeColor = this.options.strokeColor || 'rgba(100,100,100,.8)';
+    this.options.fillColor = this.options.fillColor ||  'rgba(237,178,48,1)';
     if (!this.options.hasOwnProperty('renderOnAnimate')) {
       this.options.renderOnAnimate = true;
     }
-    this.json = null;
-    this.grid = null;
   };
 
   var GridMap = function(container, options) {
@@ -362,20 +361,12 @@
     this.drawGeoJSONLayer = function(layer) {
 
       self.context.beginPath();
-      self.path(layer.json);
-      self.context.strokeStyle = layer.options.strokeColor;
-      self.context.lineWidth = 0.5;
-      self.context.stroke();
 
-      self.context.fillStyle = layer.options.fillColor;
-      self.context.fill();
-    };
-
-    this.drawTopoJSONLayer = function (layer) {
-
-      self.context.beginPath();
-      var geojson = topojson.feature(layer.json, layer.json.objects.countries);
-      self.simplifyingPath(geojson);
+      if (layer.simplified) {
+        self.simplifyingPath(layer.json);
+      } else {
+        self.path(layer.json);
+      }
       self.context.strokeStyle = layer.options.strokeColor;
       self.context.lineWidth = 0.5;
       self.context.stroke();
@@ -447,7 +438,7 @@
           }
         }
       }
-    }
+    };
 
     this.dispatch = d3.dispatch('drawStart', 'drawEnd');
 
@@ -523,8 +514,10 @@
       } else {
         // assume JSON
         if (data.type === 'Topology') {
-          // it is topojson
-          topojson.presimplify(data);
+          // it is topojson, convert it
+          var topojsonObject = (options && options.topojsonObject) || data.objects[Object.keys(data.objects)[0]];
+          data = topojson.feature(topojson.presimplify(data), topojsonObject);
+          layer.simplified = true;
         }
         layer.json = data;
       }
