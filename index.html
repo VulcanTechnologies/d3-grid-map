@@ -28,14 +28,16 @@
 
           var data = new Uint8ClampedArray(w * h * 4);
           var index = -1;
+          var r = 30;
           for (var j=0; j<h; j++) {
               for (var i=0; i<w; i++) {
                 var index = (i + j*w)*4;
-                if (index > 4*100000 && index < 4*120000) {
-                  data[index] = i/w*255;
+                if (j > 150 && j < 230 && i < 390 && i > 330) {
+                  var z = (Math.sqrt(Math.pow(i-360, 2) + Math.pow(j-180,2)));
+                  data[index] = (z < r) ? ~~(z*9) : 0;
                   data[index+1] = 0;
                   data[index+2] = 0;
-                  data[index+3] = i % 255;
+                  data[index+3] = (z < r) ? 255: 0;
                 }
               }
           }
@@ -46,25 +48,45 @@
                 fontColor: 'white',
                 verticalOffset: 5
               },
-              projection: d3.geo.aitoff(),
               onCellHover: function(feature) { console.log('hovering over ', feature);}
             };
 
             var map1 = new d3.geo.GridMap('#map1', options);
-            map1.setData(countries);
-            map1.setData(data, {gridSize: [w,h]});
+            map1.setData(countries, {
+              renderOnAnimate: true
+            });
+
+            map1.setData(data, {
+              gridSize: [w,h],
+              renderOnAnimate: false
+            });
+
+            d3.json('eez.json', function(error, eez) {
+              map1.setData(eez, {
+                strokeColor: 'rgba(0,0,0,1)',
+                fillColor: 'rgba(0,0,0,.2)',
+                renderOnAnimate: true
+              });
+            });
+
             map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
             map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
 
             options.projection = d3.geo.mercator();
             var map2 = new d3.geo.GridMap('#map2', options);
             map2.setData(countries);
-            map2.setData(data, {gridSize: [w,h]});
+            map2.setData(data, {
+              gridSize: [w,h],
+              renderOnAnimate: false
+            });
 
             options.projection = d3.geo.orthographic().clipAngle(90);
             var map3 = new d3.geo.GridMap('#map3', options);
             map3.setData(countries);
-            map3.setData(data.buffer, {gridSize: [w,h]});
+            map3.setData(data.buffer, {
+              gridSize: [w,h],
+              renderOnAnimate: false
+            });
           });
         </script>
     </body>
