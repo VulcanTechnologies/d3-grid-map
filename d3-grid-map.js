@@ -14,7 +14,6 @@
   var defaultColorScale = d3.scale.quantize()
     .domain([0,255])
     .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
-    // RdYlGn[10]
 
   var worldGeoJSON = {
     type: 'FeatureCollection',
@@ -52,7 +51,7 @@
     if (!this.options.hasOwnProperty('renderOnAnimate')) {
       this.options.renderOnAnimate = true;
     }
-    this.geojson = null;
+    this.json = null;
     this.grid = null;
   };
 
@@ -133,13 +132,6 @@
 
     this.init = function() {
       this.initEvents();
-    };
-
-    this.destroy = function() {
-      this.canvas.remove();
-      this.hudCanvas.remove();
-      this.grids = [];
-      this.geojson = null;
     };
 
     this.getCell = function(cellId) {
@@ -370,7 +362,7 @@
     this.drawGeoJSONLayer = function(layer) {
 
       self.context.beginPath();
-      self.path(layer.geojson);
+      self.path(layer.json);
       self.context.strokeStyle = layer.options.strokeColor;
       self.context.lineWidth = 0.5;
       self.context.stroke();
@@ -382,14 +374,15 @@
     this.drawTopoJSONLayer = function (layer) {
 
       self.context.beginPath();
-      self.simplifyingPath(layer.geojson);
+      var geojson = topojson.feature(layer.json, layer.json.objects.countries);
+      self.simplifyingPath(geojson);
       self.context.strokeStyle = layer.options.strokeColor;
       self.context.lineWidth = 0.5;
       self.context.stroke();
 
       self.context.fillStyle = layer.options.fillColor;
       self.context.fill();
-    }
+    };
 
     this.drawGrid = function(grid) {
 
@@ -445,8 +438,8 @@
         if (doRender) {
           if (layer.grid) {
             self.drawGrid(layer.grid);
-          } else if (layer.geojson) {
-            if (layer.geojson.type === 'Topology') {
+          } else if (layer.json) {
+            if (layer.json.type === 'Topology') {
               self.drawTopoJSONLayer(layer);
             } else {
               self.drawGeoJSONLayer(layer);
@@ -532,11 +525,8 @@
         if (data.type === 'Topology') {
           // it is topojson
           topojson.presimplify(data);
-          // FIXME: this isn't good.  hardcoded assuming only countries data
-          // and immediately converting topojson to geojson.
-          data = topojson.feature(data, data.objects.countries);
         }
-        layer.geojson = data;
+        layer.json = data;
       }
       self.layers.push(layer);
       self.draw();
