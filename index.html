@@ -55,6 +55,15 @@
               gridSize: [w,h],
               renderOnAnimate: false
             });
+
+            d3.json('eez.json', function(error, eez) {
+              map1.setData(eez, {
+                strokeColor: 'rgba(0,0,0,1)',
+                fillColor: 'rgba(0,0,0,.2)',
+                renderOnAnimate: false
+              });
+            });
+
             map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
             map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
 
