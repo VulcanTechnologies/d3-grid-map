@@ -2,6 +2,8 @@ d3-grid-map
 ===========
 D3 gridded data set mapper
 
+[See demo](http://vulcantechnologies.github.io/d3-grid-map/)
+
 This package will create a geographic map using D3 in the container of your choosing,
 which will plot a gridded global data set passed to it.
 
