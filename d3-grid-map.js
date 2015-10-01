@@ -15,27 +15,6 @@
     .domain([0,255])
     .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
 
-  var worldGeoJSON = {
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'Polygon',
-          coordinates: null
-        }
-      }
-    ]
-  };
-
-  worldGeoJSON.features[0].geometry.coordinates = [
-    d3.range(-179.9999,179.9999).map(function(x) {return [x, 89.9999];}),
-    d3.range(89.9999,-89.9999,-1).map(function(x) {return [179.9999, x];}),
-    d3.range(179.9999,-179.9999,-1).map(function(x) {return [x, -89.9999];}),
-    d3.range(-89.9999,89.9999).map(function(x) {return [-179.9999, x];}
-  )];
-
   var Grid = function(data, gridSize, bbox) {
     // represents a gridded data set.  Unless bbox is supplied,
     // it's assumed to have global coverage
@@ -300,7 +279,8 @@
       if (self.options.hud && cellId) {
         self.updateHUD(cellId, coords, cell);
       }
-    }
+    };
+
     this.initEvents = function() {
 
       var scale = 150;
@@ -352,8 +332,7 @@
 
       //draw world background (the sea)
       this.context.beginPath();
-      this.path(worldGeoJSON);
-      this.context.closePath();
+      this.path({type: 'Sphere'});
       this.context.fillStyle = this.seaColor;
       this.context.fill();
     };
@@ -391,7 +370,7 @@
           var λ = p[0];
           var φ = p[1];
 
-          if (λ > 180 || λ < -180 || φ > 90 || φ < -90) {
+          if (!(λ <= 180 && λ >= -180 && φ <= 90 && φ >= -90)) {
             continue;
           }
           var i = (x + this.width * y) * 4;

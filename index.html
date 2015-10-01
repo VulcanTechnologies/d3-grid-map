@@ -83,7 +83,7 @@
             options.projection = d3.geo.orthographic().clipAngle(90);
             var map3 = new d3.geo.GridMap('#map3', options);
             map3.setData(countries);
-            map3.setData(data.buffer, {
+            map3.setData(data, {
               gridSize: [w,h],
               renderOnAnimate: false
             });
