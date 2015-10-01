@@ -66,7 +66,6 @@
     this.projection = options.projection || d3.geo.aitoff();
     this.projection
       .translate([this.width/2, this.height/2])
-      .scale(this.width/6)
       .clipExtent([[0, 0], [self.width, self.height]])
       .precision(0.1);
 
@@ -305,16 +304,13 @@
             self.draw();
           })
           .on('zoom', function(d) {
-            if (zoom.scale() >= 2000 || zoom.scale() <= self.width/6) {
-              return;
-            }
             scale = d3.event.scale;
             self.area = 20000 / scale / scale;
             self.projection.scale(scale);
             self.drawAnimation();
           })
-          .scale(this.width/6)
-          .scaleExtent([this.width/6, 2000]);
+          .scale(scale)
+          .scaleExtent([0, 4000]);
 
         this.container.call(zoom);
       }
