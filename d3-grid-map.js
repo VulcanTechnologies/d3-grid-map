@@ -270,7 +270,7 @@
         cell = self.getCell(cellId);
         if (cell) {
           if (self.options.onCellHover) {
-            self.options.onCellHover(cell);
+            self.options.onCellHover(cell, cellId);
           }
         }
       }
