@@ -47,11 +47,10 @@
 
     this.grids = [];
     this.layers = [];
+    this.options = options || {};
 
-    this.options = options;
-
-    this.seaColor = options.seaColor || 'rgba(21,98,180,.8)';
-    this.graticuleColor = options.graticuleColor || 'rgba(255,255,255,.3)';
+    this.seaColor = this.options.seaColor || 'rgba(21,98,180,.8)';
+    this.graticuleColor = this.options.graticuleColor || 'rgba(255,255,255,.3)';
 
     self.area = 1; // minimum area threshold for simplification
 
@@ -63,7 +62,7 @@
       }
     });
 
-    this.projection = options.projection || d3.geo.aitoff();
+    this.projection = this.options.projection || d3.geo.aitoff();
     this.projection
       .translate([this.width/2, this.height/2])
       .clipExtent([[0, 0], [self.width, self.height]])
@@ -89,7 +88,7 @@
     this.context = this.canvas.node().getContext('2d');
     this.hudContext = this.hud.node().getContext('2d');
 
-    this.colorScale = options.colorScale || defaultColorScale;
+    this.colorScale = this.options.colorScale || defaultColorScale;
 
     if (!this.options.zoomLevels) {
       this.options.zoomLevels = [1, 2, 4, 8];
