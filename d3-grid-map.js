@@ -532,18 +532,15 @@
         * It can be a Layer object, or an index to
         * the internal layers array.
         */
-      var index = null;
       if (typeof(layer) === 'number') {
-        index = layer;
+        self.layers.splice(layer,1);
       } else {
         for (var i=0; i<self.layers.length; i++) {
           if (self.layers[i] === layer) {
-            index = i;
-            break;
+            self.layers.splice(i,1);
           }
         }
       }
-      self.layers.splice(index,1);
     };
 
     this.uInt8ArrayToGeoJSON = function(array) {
