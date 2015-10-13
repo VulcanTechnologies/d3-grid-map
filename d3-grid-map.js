@@ -28,6 +28,10 @@
     this.options = options || {};
     this.options.strokeColor = this.options.strokeColor || 'rgba(100,100,100,.8)';
     this.options.fillColor = this.options.fillColor ||  'rgba(237,178,48,1)';
+    if (this.options.zIndex === undefined) {
+      // zIndex of 0 is valid
+      this.options.zIndex = 1;
+    }
     if (!this.options.hasOwnProperty('renderOnAnimate')) {
       this.options.renderOnAnimate = true;
     }
@@ -485,7 +489,18 @@
       this.projection.rotate(rotation);
     };
 
-    this.setData = function(data, options) {
+    this.addLayer = function(data, options) {
+      /**
+        * adds data to the map. The type is introspected,
+        * it cant be a Uint8Array (full grid of RGBA values),
+        * ArrayBuffer (GridMap packed binary format), geojson,
+        * or topojson.
+
+        * options (optional):
+        *   zIndex - specifies layer stacking order
+        *   fillColor - fill color for vector layers
+        *   strokeColor - stroke color for vector layers
+        */
       var layer = new Layer(options);
 
       if (data.constructor === ArrayBuffer) {
@@ -505,17 +520,30 @@
         layer.json = data;
       }
       self.layers.push(layer);
+      self.layers.sort(function(a,b) {return a.options.zIndex-b.options.zIndex;});
       self.draw();
 
       return layer;
     };
 
     this.removeLayer = function(layer) {
-      for (var i=0; i<self.layers.length; i++) {
-        if (self.layers[i] === layer) {
-          self.layers.splice(i,1);
+      /**
+        * removes layer from the map.
+        * It can be a Layer object, or an index to
+        * the internal layers array.
+        */
+      var index = null;
+      if (typeof(layer) === 'number') {
+        index = layer;
+      } else {
+        for (var i=0; i<self.layers.length; i++) {
+          if (self.layers[i] === layer) {
+            index = i;
+            break;
+          }
         }
       }
+      self.layers.splice(index,1);
     };
 
     this.uInt8ArrayToGeoJSON = function(array) {
