@@ -67,19 +67,20 @@
             };
 
             var map1 = new d3.geo.GridMap('#map1', options);
-            map1.setData(countries, {
+            map1.addLayer(countries, {
               renderOnAnimate: true
             });
 
-            map1.setData(data, {
+            map1.addLayer(data, {
               gridSize: [w,h],
               renderOnAnimate: false
             });
 
             d3.json('eez.json', function(error, eez) {
-              map1.setData(eez, {
+              map1.addLayer(eez, {
                 strokeColor: 'rgba(0,0,0,1)',
                 fillColor: 'rgba(0,0,0,.2)',
+                zIndex: 0,
                 renderOnAnimate: true
               });
             });
@@ -90,8 +91,8 @@
             options.projection = d3.geo.mercator();
             options.seaColor = 'rgba(255,0,0,1)';
             var map2 = new d3.geo.GridMap('#map2', options);
-            map2.setData(countries, {fillColor: 'rgba(22,22,22,1)'});
-            map2.setData(data, {
+            map2.addLayer(countries, {fillColor: 'rgba(22,22,22,1)'});
+            map2.addLayer(data, {
               gridSize: [w,h],
               renderOnAnimate: false
             });
@@ -99,8 +100,8 @@
             options.projection = d3.geo.orthographic().clipAngle(90);
             options.seaColor = 'rgba(0,0,255,1)';
             var map3 = new d3.geo.GridMap('#map3', options);
-            map3.setData(countries, {fillColor: 'white'});
-            map3.setData(data, {
+            map3.addLayer(countries, {fillColor: 'white'});
+            map3.addLayer(data, {
               gridSize: [w,h],
               renderOnAnimate: false
             });
