@@ -510,6 +510,14 @@
       return layer;
     };
 
+    this.removeLayer = function(layer) {
+      for (var i=0; i<self.layers.length; i++) {
+        if (self.layers[i] === layer) {
+          self.layers.splice(i,1);
+        }
+      }
+    };
+
     this.uInt8ArrayToGeoJSON = function(array) {
       console.debug('uInt8ArrayToGeoJSON is deprecated. Use setData');
 
