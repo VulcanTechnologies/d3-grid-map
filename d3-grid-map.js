@@ -62,6 +62,8 @@
       }
     });
 
+    this.dispatch = d3.geo.GridMap.dispatch; //singleton
+
     this.projection = this.options.projection || d3.geo.aitoff();
     this.projection
       .translate([this.width/2, this.height/2])
@@ -72,18 +74,14 @@
       .append('canvas')
       .style('position', 'absolute')
       .style('top', '0px')
-      .style('left', '0px')
-      .attr('width', self.width)
-      .attr('height', self.height);
+      .style('left', '0px');
 
     this.hud = this.container
       .append('canvas')
       .style('position', 'absolute')
       .style('top', '0px')
       .style('left', '0px')
-      .style('z-index', '2')
-      .attr('width', self.width)
-      .attr('height', self.height);
+      .style('z-index', '2');
 
     this.context = this.canvas.node().getContext('2d');
     this.hudContext = this.hud.node().getContext('2d');
@@ -108,6 +106,7 @@
 
     this.init = function() {
       this.initEvents();
+      this.resize();
     };
 
     this.getCell = function(cellId) {
@@ -317,7 +316,9 @@
       this.container.call(drag);
 
       this.container.on('mousemove', self.onMouseMove);
-      d3.select(window).on('resize', self.resize);
+      // set up dispatcher to allow multiple GridMaps to resize
+      d3.select(window).on('resize', d3.geo.GridMap.dispatch.resize);
+      d3.geo.GridMap.dispatch.on('resize.' + self.container.attr('id'), function() {self.resize();});
     };
 
     var graticule = d3.geo.graticule()();
@@ -414,8 +415,6 @@
       }
     };
 
-    this.dispatch = d3.dispatch('drawStart', 'drawEnd');
-
     this._draw = function() {
 
       self.dispatch.drawStart();
@@ -456,12 +455,22 @@
     self.draw = debounce(self._draw, 500);
 
     this._resize = function() {
-      self.width = parseInt(self.container.style('width'), 10);
+
+      console.log('resizing ', self);
+      var rect = self.container.node().getBoundingClientRect();
+      self.width = rect.width | 0;
+      self.height = rect.height | 0;
+
       self.canvas.attr('width', self.width);
+      self.canvas.attr('height', self.height);
+
       self.hud.attr('width', self.width);
+      self.hud.attr('height', self.height);
+
       self.projection
         .translate([self.width/2, self.height/2])
         .clipExtent([[0, 0], [self.width, self.height]]);
+
       self.draw();
     };
 
@@ -660,5 +669,6 @@
   };
 
   d3.geo.GridMap = GridMap;
+  d3.geo.GridMap.dispatch = d3.geo.GridMap.dispatch || d3.dispatch('drawStart', 'drawEnd', 'resize');
 
 })();
