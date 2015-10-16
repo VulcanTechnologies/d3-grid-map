@@ -15,13 +15,13 @@
     .domain([0,255])
     .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
 
-  var Grid = function(data, gridSize, bbox) {
-    // represents a gridded data set.  Unless bbox is supplied,
-    // it's assumed to have global coverage
+  var Grid = function(data, gridSize, rawData) {
+    // represents a gridded data set.  rawData should be an object
+    // mapping cellId to cell value
     this.data = data;
     this.rows = gridSize[1];
     this.cols = gridSize[0];
-    this.bbox = bbox; // optional, currently unused
+    this.rawData = rawData;
   };
 
   var Layer = function(options) {
@@ -118,8 +118,8 @@
       // (RGBA) values
       var grid = this.getGrid();
 
-      if (grid && grid.data[cellId*4 + 3]) {
-        return grid.data[cellId*4];
+      if (grid && grid.rawData) {
+        return grid.rawData[cellId];
       }
     };
 
@@ -604,9 +604,12 @@
 
       var typedArray = new Uint32Array(buff);
 
+      var rawData = [];
+
       for (var i=0; i<typedArray.length; i++) {
         var packed = typedArray[i];
-        var cellId = (packed & 0xfffff) << 2;
+        var cellId = (packed & 0xfffff);
+        var idx = cellId << 2;
         // unpack most significant byte, the data value.
         // note the triple arrow, which fills in 0s instead of 1s.
         var value = packed >>> 24;
@@ -614,12 +617,14 @@
         var color = d3.rgb(self.colorScale(value));
         var alpha = 255;
 
-        data[cellId+0] = color.r;
-        data[cellId+1] = color.g;
-        data[cellId+2] = color.b;
-        data[cellId+3] = alpha;
+        data[idx+0] = color.r;
+        data[idx+1] = color.g;
+        data[idx+2] = color.b;
+        data[idx+3] = alpha;
+
+        rawData[cellId] = value;
       }
-      return new Grid(data, gridSize);
+      return new Grid(data, gridSize, rawData);
     };
 
     this.arrayBufferToGeoJSON = function(buff) {
