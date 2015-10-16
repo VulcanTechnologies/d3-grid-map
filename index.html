@@ -4,10 +4,11 @@
         <meta charset='utf-8'>
         <style type="text/css">
             .map {
-                width: 100%;
-                height: 500px;
+                width: 45%;
+                height: 400px;
                 border: 1px solid black;
-                margin: 0px;
+                margin: 10px;
+                float: left;
                 position: relative;
             }
         </style>
@@ -26,6 +27,59 @@
           var w = 720;
           var h = 360;
 
+          var options = {
+            hud: {
+              fontSize: 20,
+              fontColor: 'white',
+              verticalOffset: 5
+            },
+            onCellHover: function(feature) { console.log('hovering over ', feature);}
+          };
+
+          var map1 = new d3.geo.GridMap('#map1', options);
+
+          // register some callbacks on map events
+          map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
+          map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
+
+          options.projection = d3.geo.mercator();
+          var map2 = new d3.geo.GridMap('#map2', options);
+
+          var orthographicProjection = d3.geo.orthographic().clipAngle(90);
+          options.projection = orthographicProjection;
+          var map3 = new d3.geo.GridMap('#map3', options);
+
+          options.projection = d3.geo.gnomonic();
+          var map4 = new d3.geo.GridMap('#map4', options);
+
+          // add a topojson base layer to the maps
+          d3.json('data/countries.topojson', function(error, countries) {
+            map1.addLayer(countries);
+            map2.addLayer(countries);
+            map3.addLayer(countries);
+            map4.addLayer(countries);
+          });
+
+          // add a packed binary data set to a map
+          d3.xhr('data/packed-binary.dat')
+            .responseType('arraybuffer')
+            .get(function(error, xhr) {
+              var buff = xhr.response;
+              var layerOptions = {gridSize: [w, h], zIndex: 3, renderOnAnimate: false};
+              map1.addLayer(buff, layerOptions);
+            });
+
+          // add a geojson dataset to a map
+          d3.json('data/eez.json', function(error, eez) {
+            var layer = map1.addLayer(eez, {
+              strokeColor: 'rgba(0,0,0,1)',
+              fillColor: 'rgba(0,0,0,.2)',
+              zIndex: 2,
+              renderOnAnimate: true
+            });
+          });
+
+          // create some fake gridded data
           var data = new Uint8ClampedArray(w * h * 4);
           var index = -1;
           var r = 30;
@@ -34,61 +88,22 @@
                 var index = (i + j*w)*4;
                 if (j > 150 && j < 230 && i < 390 && i > 330) {
                   var z = (Math.sqrt(Math.pow(i-360, 2) + Math.pow(j-180,2)));
-                  data[index] = (z < r) ? ~~(z*9) : 0;
+                  data[index] = (z < r) ? ~~(z*9) : 255;
                   data[index+1] = 0;
                   data[index+2] = 0;
-                  data[index+3] = (z < r) ? 255: 0;
+                  data[index+3] = (z < r) ? 255: 127;
                 }
               }
           }
-          d3.json('countries.topojson', function(error, countries) {
-            var options = {
-              hud: {
-                fontSize: 20,
-                fontColor: 'white',
-                verticalOffset: 5
-              },
-              onCellHover: function(feature) { console.log('hovering over ', feature);}
-            };
 
-            var map1 = new d3.geo.GridMap('#map1', options);
-            map1.addLayer(countries, {
-              renderOnAnimate: true
-            });
+          var fakeGridOptions = {
+            gridSize: [w,h],
+            renderOnAnimate: false
+          };
 
-            map1.addLayer(data, {
-              gridSize: [w,h],
-              renderOnAnimate: false
-            });
+          map2.addLayer(data, fakeGridOptions);
+          map3.addLayer(data, fakeGridOptions);
 
-            d3.json('eez.json', function(error, eez) {
-              var layer = map1.addLayer(eez, {
-                strokeColor: 'rgba(0,0,0,1)',
-                fillColor: 'rgba(0,0,0,.2)',
-                zIndex: 0,
-                renderOnAnimate: true
-              });
-            });
-
-            map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
-            map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
-
-            options.projection = d3.geo.mercator();
-            var map2 = new d3.geo.GridMap('#map2', options);
-            map2.addLayer(countries);
-            map2.addLayer(data, {
-              gridSize: [w,h],
-              renderOnAnimate: false
-            });
-
-            options.projection = d3.geo.orthographic().clipAngle(90);
-            var map3 = new d3.geo.GridMap('#map3', options);
-            map3.addLayer(countries);
-            map3.addLayer(data, {
-              gridSize: [w,h],
-              renderOnAnimate: false
-            });
-          });
         </script>
     </body>
 </html>
