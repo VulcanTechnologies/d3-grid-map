@@ -199,6 +199,9 @@
 
       var grid = this.getGrid();
 
+      if (! grid) {
+        return;
+      }
       var rows = grid.rows;
       var cols = grid.cols;
 
@@ -207,6 +210,44 @@
 
       var cellId = row * cols + col + 1;
       return cellId;
+    };
+
+    this.drawLegend = function(grid) {
+      var legendWidth = 150;
+      var legendHeight = 30;
+      var legendX = self.width - 170;
+      var legendY = self.height - legendHeight - 20;
+      var margin = 5;
+      var stops = [
+        {x: 0, label: '0.0'},
+        {x: 51, label: '0.2'},
+        {x: 102, label: '0.4'},
+        {x: 153, label: '0.6'},
+        {x: 204, label: '0.8'},
+        {x: 255, label: '1.0'}
+      ];
+      var ctx = this.hudContext;
+      var stopWidth = (legendWidth - 2*margin) / stops.length;
+
+      ctx.save();
+      ctx.translate(legendX, legendY);
+      ctx.clearRect(0, 0, legendWidth, legendHeight);
+      ctx.fillStyle = 'rgba(0,0,0,.5)';
+      ctx.fillRect(0, 0, legendWidth, legendHeight);
+
+      var font = '8px Helvetica';
+      ctx.font = font;
+
+      for (var i=0; i<stops.length; i++) {
+        var stop = stops[i];
+        var color = d3.rgb(self.colorScale(stop.x));
+        ctx.fillStyle = color;
+        ctx.fillRect(i*stopWidth + margin, margin, stopWidth, legendHeight - 2*margin);
+
+        ctx.fillStyle = ((color.r + color.g + color.b) / 3 > 127) ? 'black' : 'white';
+        ctx.fillText(stop.label, (i+0.5)*stopWidth, legendHeight/2 + 2);
+      }
+      ctx.restore();
     };
 
     this.updateHUD = function(cellId, coords, cell) {
@@ -219,19 +260,30 @@
 
       var font = fontSize + 'px ' + fontFace;
       var h = fontSize + verticalOffset;
-      var gradient = self.hudContext.createLinearGradient(0,self.height-h,0,self.height);
+      var gradient = self.hudContext.createLinearGradient(0, 0, 0, h);
       gradient.addColorStop(0, 'rgba(0,0,0,0.0)');
       gradient.addColorStop(1, 'rgba(0,0,0,1.0)');
 
-      self.hudContext.clearRect(0, 0, self.width, self.height);
-      self.hudContext.fillStyle = gradient;
-      self.hudContext.fillRect(0,self.height-(h), self.width, self.height);
+      var ctx = self.hudContext;
+      ctx.clearRect(0, 0, self.width, self.height);
+
+      // we'll be coloring this one, so add a legend
+      if (self.options.legend) {
+        self.drawLegend();
+      }
+
+      // ctx.clearRect(0, 0, self.width, h);
+      ctx.save();
+      ctx.translate(0, self.height-(h));
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, self.width, h);
 
       var s = '';
 
       s = 'cell: ' + cellId + ' ( ' + coordFormat(coords[0]) + '°,' + coordFormat(coords[1]) + '° )';
 
-      var coordinates = self.cellIdToCoordinates(cellId, self.grids[0]);
+      var coordinates = self.cellIdToCoordinates(cellId, self.getGrid());
 
       var feature = {
         type: 'Feature',
@@ -242,18 +294,20 @@
       };
 
       if (cell !== undefined) {
-        s += ' value: ' + cell;
+        s += ' value: ' + d3.format('.4e')(cell/255);
       }
 
-      self.hudContext.font = font;
-      self.hudContext.fillStyle = fontColor;
-      self.hudContext.fillText(s, 0, self.height - verticalOffset);
+      ctx.font = font;
+      ctx.fillStyle = fontColor;
+      ctx.fillText(s, 0, h - verticalOffset);
 
-      self.hudContext.beginPath();
-      self.hudContext.strokeStyle = 'white';
-      self.hudContext.lineWidth = 2;
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
       self.hudPath(feature);
-      self.hudContext.stroke();
+      ctx.stroke();
     };
 
     this.onMouseMove = function() {

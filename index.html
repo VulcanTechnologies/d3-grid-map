@@ -28,6 +28,7 @@
           var h = 360;
 
           var options = {
+            legend: true,
             hud: {
               fontSize: 20,
               fontColor: 'white',
@@ -42,6 +43,8 @@
           map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
           map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
 
+          options = JSON.parse(JSON.stringify(options)); // deep copy
+          options.legend = false;
           options.projection = d3.geo.mercator();
           var map2 = new d3.geo.GridMap('#map2', options);
 
