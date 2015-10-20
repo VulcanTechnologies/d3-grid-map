@@ -37,6 +37,98 @@
     }
   };
 
+  var Legend = function(options) {
+    /**
+      * Create a legend which shows the color scale in options.colorScale for
+      * the 6 values [0,0.2,0.4,0.6,0.8,1.0]
+      * Pass in the canvas context on which to draw as
+      * options.context.
+      * var legend = new Legend({context: ctx});
+      * Then draw the legend
+      * legend.draw()
+      */
+    this.options = options;
+    var ctx = options.context;
+    var width = this.options.width || 150;
+    var height = this.options.height || 30;
+    var cornerOffset = this.options.cornerOffset || {x: 5, y: 20};
+    var margin = this.options.margin || 5;
+
+    this.complementaryColor = function(color) {
+      // not really complementary color, just a color which
+      // contrasts with color
+      function rotate(x) {
+        return (x+127)%255;
+      }
+      var complement = d3.rgb(rotate(color.r), rotate(color.g), rotate(color.b));
+      return complement;
+    };
+
+    this.xy = function() {
+      // returns corner point of legend wrt/ canvas
+      return {
+        x: ctx.canvas.clientWidth - width - cornerOffset.x,
+        y: ctx.canvas.clientHeight - height - cornerOffset.y
+      };
+    };
+    this.draw = function(value) {
+      /**
+        * Draws legend on context.
+        */
+      var legendX = ctx.canvas.clientWidth - width - cornerOffset.x;
+      var legendY = ctx.canvas.clientHeight - height - cornerOffset.y;
+      var stops = [
+        {x: 0, label: '0.0'},
+        {x: 51, label: '0.2'},
+        {x: 102, label: '0.4'},
+        {x: 153, label: '0.6'},
+        {x: 204, label: '0.8'},
+        {x: 255, label: '1.0'}
+      ];
+      var stopWidth = (width - 2*margin) / stops.length;
+
+      ctx.save();
+      ctx.translate(legendX, legendY);
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(0,0,0,.5)';
+      ctx.fillRect(0, 0, width, height);
+
+      var font = '8px Helvetica';
+      ctx.font = font;
+
+      for (var i=0; i<stops.length; i++) {
+        var stop = stops[i];
+        var color = d3.rgb(this.options.colorScale(stop.x));
+        ctx.fillStyle = color;
+        ctx.fillRect(i*stopWidth + margin, margin, stopWidth, height - 2*margin);
+
+        ctx.fillStyle = this.complementaryColor(color);
+        ctx.fillText(stop.label, (i+0.5)*stopWidth, height/2 + 2);
+      }
+      ctx.restore();
+    };
+
+    this.highlight = function(value) {
+      /**
+        * highlight value position (0-1) on the legend
+        */
+      var ctx = this.options.context;
+      ctx.save();
+      var xy = this.xy();
+      ctx.translate(xy.x+margin, xy.y+margin);
+      var color = d3.rgb(this.options.colorScale(value*255));
+      ctx.strokeStyle = this.complementaryColor(color);
+      var xPosition = (width - 2*margin) * value;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xPosition, 0);
+      ctx.lineTo(xPosition, height-2*margin);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+  };
+
   var GridMap = function(container, options) {
     var self = this;
 
@@ -94,6 +186,12 @@
 
     if (!this.options.zoomLevels) {
       this.options.zoomLevels = [1, 2, 4, 8];
+    }
+
+    if (this.options.legend) {
+      this.options.context = this.hudContext;
+      this.options.colorScale = this.colorScale;
+      this.legend = new Legend(this.options);
     }
 
     this.simplifyingPath = d3.geo.path()
@@ -212,44 +310,6 @@
       return cellId;
     };
 
-    this.drawLegend = function(grid) {
-      var legendWidth = 150;
-      var legendHeight = 30;
-      var legendX = self.width - 170;
-      var legendY = self.height - legendHeight - 20;
-      var margin = 5;
-      var stops = [
-        {x: 0, label: '0.0'},
-        {x: 51, label: '0.2'},
-        {x: 102, label: '0.4'},
-        {x: 153, label: '0.6'},
-        {x: 204, label: '0.8'},
-        {x: 255, label: '1.0'}
-      ];
-      var ctx = this.hudContext;
-      var stopWidth = (legendWidth - 2*margin) / stops.length;
-
-      ctx.save();
-      ctx.translate(legendX, legendY);
-      ctx.clearRect(0, 0, legendWidth, legendHeight);
-      ctx.fillStyle = 'rgba(0,0,0,.5)';
-      ctx.fillRect(0, 0, legendWidth, legendHeight);
-
-      var font = '8px Helvetica';
-      ctx.font = font;
-
-      for (var i=0; i<stops.length; i++) {
-        var stop = stops[i];
-        var color = d3.rgb(self.colorScale(stop.x));
-        ctx.fillStyle = color;
-        ctx.fillRect(i*stopWidth + margin, margin, stopWidth, legendHeight - 2*margin);
-
-        ctx.fillStyle = ((color.r + color.g + color.b) / 3 > 127) ? 'black' : 'white';
-        ctx.fillText(stop.label, (i+0.5)*stopWidth, legendHeight/2 + 2);
-      }
-      ctx.restore();
-    };
-
     this.updateHUD = function(cellId, coords, cell) {
       var coordFormat = d3.format(' >+7.3f');
 
@@ -267,12 +327,6 @@
       var ctx = self.hudContext;
       ctx.clearRect(0, 0, self.width, self.height);
 
-      // we'll be coloring this one, so add a legend
-      if (self.options.legend) {
-        self.drawLegend();
-      }
-
-      // ctx.clearRect(0, 0, self.width, h);
       ctx.save();
       ctx.translate(0, self.height-(h));
 
@@ -283,18 +337,9 @@
 
       s = 'cell: ' + cellId + ' ( ' + coordFormat(coords[0]) + '°,' + coordFormat(coords[1]) + '° )';
 
-      var coordinates = self.cellIdToCoordinates(cellId, self.getGrid());
-
-      var feature = {
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [coordinates]
-        },
-      };
-
       if (cell !== undefined) {
-        s += ' value: ' + d3.format('.4e')(cell/255);
+        var normalizedValue = cell / 255;
+        s += ' value: ' + d3.format('.4e')(normalizedValue);
       }
 
       ctx.font = font;
@@ -303,11 +348,27 @@
 
       ctx.restore();
 
+      // draw highlight box around hovered cell
+      var feature = {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [self.cellIdToCoordinates(cellId, self.getGrid())]
+        },
+      };
+
       ctx.beginPath();
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 2;
       self.hudPath(feature);
       ctx.stroke();
+
+      if (self.legend) {
+        self.legend.draw();
+        if (cell) {
+          self.legend.highlight(normalizedValue);
+        }
+      }
     };
 
     this.onMouseMove = function() {
