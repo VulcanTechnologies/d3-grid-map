@@ -40,72 +40,54 @@
 
           var w = 720;
           var h = 360;
+          var options = {
+            hud: {
+              fontSize: 20,
+              fontColor: 'white',
+              verticalOffset: 5
+            },
+            onCellHover: function(feature) { console.log('hovering over ', feature);},
+            legend: true
+          };
 
-          var data = new Uint8ClampedArray(w * h * 4);
-          var index = -1;
-          var r = 30;
-          for (var j=0; j<h; j++) {
-              for (var i=0; i<w; i++) {
-                var index = (i + j*w)*4;
-                if (j > 150 && j < 230 && i < 390 && i > 330) {
-                  var z = (Math.sqrt(Math.pow(i-360, 2) + Math.pow(j-180,2)));
-                  data[index] = (z < r) ? ~~(z*9) : 0;
-                  data[index+1] = 0;
-                  data[index+2] = 0;
-                  data[index+3] = (z < r) ? 255: 0;
-                }
-              }
-          }
+          var map1 = new d3.geo.GridMap('#map1', options);
+
+          options.projection = d3.geo.mercator();
+          options.seaColor = 'rgba(255,0,0,1)';
+          var map2 = new d3.geo.GridMap('#map2', options);
+
+          options.projection = d3.geo.orthographic().clipAngle(90);
+          options.seaColor = 'rgba(0,0,255,1)';
+          var map3 = new d3.geo.GridMap('#map3', options);
+
           d3.json('countries.topojson', function(error, countries) {
-            var options = {
-              hud: {
-                fontSize: 20,
-                fontColor: 'white',
-                verticalOffset: 5
-              },
-              onCellHover: function(feature) { console.log('hovering over ', feature);}
-            };
+            map1.addLayer(countries);
+            map2.addLayer(countries, {fillColor: 'rgba(22,22,22,1)'});
+            map3.addLayer(countries, {fillColor: 'white'});
+          });
 
-            var map1 = new d3.geo.GridMap('#map1', options);
-            map1.addLayer(countries, {
+          d3.json('eez.json', function(error, eez) {
+            map1.addLayer(eez, {
+              strokeColor: 'rgba(0,0,0,1)',
+              fillColor: 'rgba(0,0,0,.2)',
+              zIndex: 4,
               renderOnAnimate: true
             });
-
-            map1.addLayer(data, {
-              gridSize: [w,h],
-              renderOnAnimate: false
-            });
-
-            d3.json('eez.json', function(error, eez) {
-              map1.addLayer(eez, {
-                strokeColor: 'rgba(0,0,0,1)',
-                fillColor: 'rgba(0,0,0,.2)',
-                zIndex: 0,
-                renderOnAnimate: true
-              });
-            });
-
-            map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
-            map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
-
-            options.projection = d3.geo.mercator();
-            options.seaColor = 'rgba(255,0,0,1)';
-            var map2 = new d3.geo.GridMap('#map2', options);
-            map2.addLayer(countries, {fillColor: 'rgba(22,22,22,1)'});
-            map2.addLayer(data, {
-              gridSize: [w,h],
-              renderOnAnimate: false
-            });
-
-            options.projection = d3.geo.orthographic().clipAngle(90);
-            options.seaColor = 'rgba(0,0,255,1)';
-            var map3 = new d3.geo.GridMap('#map3', options);
-            map3.addLayer(countries, {fillColor: 'white'});
-            map3.addLayer(data, {
-              gridSize: [w,h],
-              renderOnAnimate: false
-            });
           });
+
+          // add a packed binary data set to a map
+          d3.xhr('data/packed-binary.dat')
+            .responseType('arraybuffer')
+            .get(function(error, xhr) {
+              var buff = xhr.response;
+              var layerOptions = {gridSize: [w, h], zIndex: 3, renderOnAnimate: false};
+              map1.addLayer(buff, layerOptions);
+              map3.addLayer(buff, layerOptions);
+            });
+
+          map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
+          map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
+
         </script>
     </body>
 </html>
