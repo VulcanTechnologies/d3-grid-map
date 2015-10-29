@@ -130,7 +130,6 @@ var Data = {
 module.exports = Data;
 
 },{"./grid.js":2}],2:[function(require,module,exports){
-
 var Grid = function(data, gridSize, rawData) {
   // represents a gridded data set.  rawData should be an object
   // mapping cellId to cell value
@@ -629,10 +628,8 @@ var GridMap = function(container, options) {
 
   this.resize = debounce(self._resize, 200);
 
-  this.panToCentroid = function() {
-    console.debug('panToCentroid needs updating');
-    return;
-    var centroid = d3.geo.centroid(this.geojson);
+  this.panToCentroid = function(geojson) {
+    var centroid = d3.geo.centroid(geojson);
     var rotation = this.projection.rotate();
     rotation[0] = -centroid[0]; // note the '-'
     this.projection.rotate(rotation);
@@ -744,12 +741,12 @@ var Layer = function(options) {
   if (!this.options.hasOwnProperty('renderOnAnimate')) {
     this.options.renderOnAnimate = true;
   }
+
 };
 
 module.exports = Layer;
 
 },{}],6:[function(require,module,exports){
-
 var Legend = function(options) {
   /**
     * Create a legend which shows the color scale in options.colorScale for

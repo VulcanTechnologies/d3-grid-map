@@ -324,10 +324,8 @@ var GridMap = function(container, options) {
 
   this.resize = debounce(self._resize, 200);
 
-  this.panToCentroid = function() {
-    console.debug('panToCentroid needs updating');
-    return;
-    var centroid = d3.geo.centroid(this.geojson);
+  this.panToCentroid = function(geojson) {
+    var centroid = d3.geo.centroid(geojson);
     var rotation = this.projection.rotate();
     rotation[0] = -centroid[0]; // note the '-'
     this.projection.rotate(rotation);
