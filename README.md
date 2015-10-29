@@ -48,7 +48,7 @@ options:
  - zIndex - higher numbers will be stacked on top of lower numbers
 
 Example
-=====
+=======
     d3.json('data/countries.topojson', function(error, countries) {
 
       var gridSize = [720, 360];
@@ -69,3 +69,19 @@ Example
 
       map.addLayer(data, {gridSize: gridSize, zIndex: 2});
     });
+
+Development
+===========
+
+install dependencies with
+
+    npm install
+    bower install
+
+Then build with
+
+    make
+
+To start up an autoreloading development server on the demo index.html:
+
+    make develop

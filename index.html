@@ -44,7 +44,7 @@
           map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
 
           options = JSON.parse(JSON.stringify(options)); // deep copy
-          options.legend = false;
+          // options.legend = false;
           options.projection = d3.geo.mercator();
           var map2 = new d3.geo.GridMap('#map2', options);
 
@@ -106,7 +106,6 @@
           };
 
           map2.addLayer(data, fakeGridOptions);
-          map3.addLayer(data, fakeGridOptions);
 
         </script>
     </body>

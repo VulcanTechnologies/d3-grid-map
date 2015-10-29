@@ -7,7 +7,7 @@
     "d3",
     "map",
     "geo",
-    "gridded",
+    "gridded"
   ],
   "repository": {
     "type": "git",
@@ -16,10 +16,15 @@
   "dependencies": {
     "d3": "~3.4",
     "topojson": "~1.6",
-    "d3-geo-projection": "~0.2",
+    "d3-geo-projection": "~0.2"
   },
   "authors": [
     "Joseph Sheedy <joseph.sheedy@gmail.com>"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "beefy": "^2.1.5",
+    "uglify": "^0.1.5",
+    "uglifyify": "^3.0.1"
+  }
 }
