@@ -18,8 +18,8 @@ var defaultColorScale = d3.scale.quantize()
 var GridMap = function(container, options) {
   var self = this;
 
-  this.rotateLatitude = 0.0;
-  this.rotateLongitude = 0.0;
+  var rotateLatitude = 0;
+  var rotateLongitude = 0;
 
   this.container = d3.select(container);
   var graticule = d3.geo.graticule()();
@@ -142,9 +142,9 @@ var GridMap = function(container, options) {
       .on('dragstart', function () {
       })
       .on('drag', function () {
-        self.rotateLongitude += 100 * d3.event.dx / scale;
-        self.rotateLatitude -= 100 * d3.event.dy / scale;
-        self.projection.rotate([self.rotateLongitude, self.rotateLatitude]);
+        rotateLongitude += (100 * d3.event.dx / scale);
+        rotateLatitude -= (100 * d3.event.dy / scale);
+        self.projection.rotate([rotateLongitude, rotateLatitude]);
         self.drawAnimation();
       })
       .on('dragend', function () {
@@ -205,42 +205,69 @@ var GridMap = function(container, options) {
     self.context.fill();
   };
 
-  this.drawGrid = function(grid) {
+  this.screenCoordinatesToGridIndex = function(coords, projection, grid) {
+    /**
+      * Returns the index of grid.data which corresponds to the screen coordinates
+      * given projection.
+      *
+      * @param {Array} coords [x,y]
+      * @param {Projection} d3.geo.projection
+      * @param {Grid} grid
+      * @return {Number} index in grid.data
+      */
+
+    var p = projection.invert(coords);
+
+    if (!p) {
+      return;
+    }
+
+    var λ = p[0];
+    var φ = p[1];
+
+    if (!(λ <= 180 && λ >= -180 && φ <= 90 && φ >= -90)) {
+      return;
+    }
+
+    // Add 1 because cell IDs are defined to be 1-based instead
+    // of our 0-based arrays.
+    var index = ~~((~~((90 - φ) / 180 * grid.rows) * grid.cols + (180 + λ) / 360 * grid.cols + 1.0));
+
+    return index;
+  };
+
+  this.renderGridToCanvas = function(grid, indexMap) {
 
     var image = this.context.getImageData(0, 0, this.width, this.height);
     var imageData = image.data;
 
+    for (var i=0; i<indexMap.length; i++) {
+      var imageIndexT4 = i*4;
+      var gridIndexT4 = indexMap[i]*4;
+
+      if (grid.data[gridIndexT4+3] === 0) {
+        // skip where alpha is 0;
+        continue;
+      }
+      imageData[imageIndexT4] = grid.data[gridIndexT4];
+      imageData[imageIndexT4++] = grid.data[gridIndexT4++];
+      imageData[imageIndexT4++] = grid.data[gridIndexT4++];
+      imageData[imageIndexT4++] = grid.data[gridIndexT4++];
+    }
+
+    self.context.putImageData(image, 0, 0);
+  };
+
+  this.drawGrid = function(grid) {
+    var indexMap = [];
     for (var y = 0; y < this.height; y++) {
       for (var x = 0; x < this.width; x++) {
-        var p = this.projection.invert([x, y]);
-
-        if (!p) {
-          continue;
-        }
-
-        var λ = p[0];
-        var φ = p[1];
-
-        if (!(λ <= 180 && λ >= -180 && φ <= 90 && φ >= -90)) {
-          continue;
-        }
-        var i = (x + this.width * y) * 4;
-
-        // Add 1 because cell IDs are defined to be 1-based instead
-        // of our 0-based arrays.
-        var q = ~~((~~((90 - φ) / 180 * grid.rows) * grid.cols + (180 + λ) / 360 * grid.cols + 1.0));
-
-        if (grid.data[q*4+3] === 0) {
-          // skip where alpha is 0;
-          continue;
-        }
-        imageData[i] = grid.data[q*4];
-        imageData[i+1] = grid.data[q*4+1];
-        imageData[i+2] = grid.data[q*4+2];
-        imageData[i+3] = grid.data[q*4+3];
+        var imageIndex = (x + this.width * y);
+        var gridIndex = this.screenCoordinatesToGridIndex([x,y], self.projection, grid);
+        indexMap[imageIndex] = gridIndex;
       }
     }
-    self.context.putImageData(image, 0, 0);
+    this.renderGridToCanvas(grid, indexMap);
   };
 
   this.drawGraticule = function() {
@@ -325,8 +352,8 @@ var GridMap = function(container, options) {
   this.resize = debounce(self._resize, 200);
 
   this.panToCentroid = function(geojson) {
-    var centroid = d3.geo.centroid(geojson);
-    var rotation = this.projection.rotate();
+    var centroid = d3.geo.centroid(geojson).map(Math.round);
+    var rotation = this.projection.rotate().map(Math.round);
     rotation[0] = -centroid[0]; // note the '-'
     this.projection.rotate(rotation);
   };
