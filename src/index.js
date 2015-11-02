@@ -60,7 +60,10 @@ var GridMap = function(container, options) {
 
   this.context = this.canvas.node().getContext('2d');
 
-  var hud = new HUD(this);
+  var hud = {};
+  if (options.hud) {
+    new HUD(this);
+  }
 
   this.colorScale = this.options.colorScale || defaultColorScale;
 
@@ -68,7 +71,7 @@ var GridMap = function(container, options) {
     this.options.zoomLevels = [1, 2, 4, 8];
   }
 
-  if (this.options.legend) {
+  if (this.options.legend && hud) {
     this.options.context = hud.context;
     this.options.colorScale = this.colorScale;
     this.legend = new Legend(this.options);

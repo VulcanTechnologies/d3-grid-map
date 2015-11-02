@@ -48,6 +48,8 @@
           options.projection = d3.geo.mercator();
           var map2 = new d3.geo.GridMap('#map2', options);
 
+          options = JSON.parse(JSON.stringify(options)); // deep copy
+          options.hud = null;
           var orthographicProjection = d3.geo.orthographic().clipAngle(90);
           options.projection = orthographicProjection;
           var map3 = new d3.geo.GridMap('#map3', options);
