@@ -364,9 +364,9 @@ var GridMap = function(container, options) {
 
   this.context = this.canvas.node().getContext('2d');
 
-  var hud = {};
+  var hud = null;
   if (options.hud) {
-    new HUD(this);
+    hud = new HUD(this);
   }
 
   this.colorScale = this.options.colorScale || defaultColorScale;
