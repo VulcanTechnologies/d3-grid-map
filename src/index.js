@@ -304,14 +304,20 @@ var GridMap = function(container, options) {
       * It can be a Layer object, or an index to
       * the internal layers array.
       */
+
+    var layer;
+
     if (typeof(layer) === 'number') {
-      self.layers.splice(layer,1);
+      layer = self.layers.splice(layer,1);
     } else {
       for (var i=0; i<self.layers.length; i++) {
         if (self.layers[i] === layer) {
-          self.layers.splice(i,1);
+          layer = self.layers.splice(i,1);
         }
       }
+    }
+    if (layer) {
+      layer[0].remove();
     }
   };
 

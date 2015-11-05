@@ -31,6 +31,10 @@ var Layer = function(gridMap, options) {
     canvas.attr('height', height);
   };
 
+  this.remove = function() {
+    canvas.remove();
+  };
+
   this.renderGridToCanvas = function(grid, indexMap) {
 
     var image = context.getImageData(0, 0, gridMap.width, gridMap.height);
