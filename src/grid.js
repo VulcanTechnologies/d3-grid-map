@@ -73,7 +73,7 @@ var Grid = function(data, gridSize, rawData) {
     return coordinates;
   };
 
-  this.screenCoordinatesToGridIndex = function(coords, projection, grid) {
+  this.screenCoordinatesToGridIndex = function(coords, projection) {
     /**
       * Returns the index of grid.data which corresponds to the screen coordinates
       * given projection.
@@ -99,9 +99,30 @@ var Grid = function(data, gridSize, rawData) {
 
     // Add 1 because cell IDs are defined to be 1-based instead
     // of our 0-based arrays.
-    var index = ~~((~~((90 - φ) / 180 * grid.rows) * grid.cols + (180 + λ) / 360 * grid.cols + 1.0));
+    var index = ~~((~~((90 - φ) / 180 * this.rows) * this.cols + (180 + λ) / 360 * this.cols + 1.0));
 
     return index;
+  };
+
+  this.getIndexMap = function(gridMap) {
+    var cacheKey = gridMap.projection.rotate().slice(0,2).join('-') + '-' + gridMap.projection.scale();
+    var indexMap = [];
+    var cache = gridMap; // do something better for caching
+    if (cache.indexMapCache && cache.indexMapCache[cacheKey]) {
+      console.log('indexMap cache hit!');
+      indexMap = cache.indexMapCache[cacheKey];
+    } else {
+      cache.indexMapCache = {};
+      for (var y = 0; y < gridMap.height; y++) {
+        for (var x = 0; x < gridMap.width; x++) {
+          var imageIndex = (x + gridMap.width * y);
+          var gridIndex = this.screenCoordinatesToGridIndex([x,y], gridMap.projection);
+          indexMap[imageIndex] = gridIndex;
+        }
+      }
+      cache.indexMapCache[cacheKey] = indexMap;
+    }
+    return indexMap;
   };
 
 };

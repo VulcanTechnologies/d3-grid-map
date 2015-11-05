@@ -305,20 +305,17 @@ var GridMap = function(container, options) {
       * the internal layers array.
       */
 
-    var layer;
-
     if (typeof(layer) === 'number') {
-      layer = self.layers.splice(layer,1);
+      layer = self.layers.splice(layer,1)[0];
     } else {
       for (var i=0; i<self.layers.length; i++) {
         if (self.layers[i] === layer) {
-          layer = self.layers.splice(i,1);
+          self.layers.splice(i,1);
         }
       }
     }
-    if (layer) {
-      layer[0].remove();
-    }
+    layer.remove();
+    return layer;
   };
 
   this.zoomTo = function (newScale) {

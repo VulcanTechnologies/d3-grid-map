@@ -60,14 +60,7 @@ var Layer = function(gridMap, options) {
   };
 
   this.drawGrid = function(grid) {
-    var indexMap = [];
-    for (var y = 0; y < gridMap.height; y++) {
-      for (var x = 0; x < gridMap.width; x++) {
-        var imageIndex = (x + gridMap.width * y);
-        var gridIndex = grid.screenCoordinatesToGridIndex([x,y], gridMap.projection, grid);
-        indexMap[imageIndex] = gridIndex;
-      }
-    }
+    var indexMap = grid.getIndexMap(gridMap);
     this.renderGridToCanvas(this.grid, indexMap);
   };
 
