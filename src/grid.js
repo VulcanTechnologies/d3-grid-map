@@ -105,7 +105,13 @@ var Grid = function(data, gridSize, rawData) {
   };
 
   this.getIndexMap = function(gridMap) {
-    var cacheKey = gridMap.projection.rotate().slice(0,2).join('-') + '-' + gridMap.projection.scale();
+    var cacheKey = [
+      gridMap.projection.rotate().slice(0,2).join('-'),
+      gridMap.projection.scale(),
+      gridMap.width,
+      gridMap.height
+    ].join('-');
+
     var indexMap = [];
     var cache = gridMap; // do something better for caching
     if (cache.indexMapCache && cache.indexMapCache[cacheKey]) {
