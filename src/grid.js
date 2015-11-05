@@ -73,6 +73,37 @@ var Grid = function(data, gridSize, rawData) {
     return coordinates;
   };
 
+  this.screenCoordinatesToGridIndex = function(coords, projection, grid) {
+    /**
+      * Returns the index of grid.data which corresponds to the screen coordinates
+      * given projection.
+      *
+      * @param {Array} coords [x,y]
+      * @param {Projection} d3.geo.projection
+      * @param {Grid} grid
+      * @return {Number} index in grid.data
+      */
+
+    var p = projection.invert(coords);
+
+    if (!p) {
+      return;
+    }
+
+    var λ = p[0];
+    var φ = p[1];
+
+    if (!(λ <= 180 && λ >= -180 && φ <= 90 && φ >= -90)) {
+      return;
+    }
+
+    // Add 1 because cell IDs are defined to be 1-based instead
+    // of our 0-based arrays.
+    var index = ~~((~~((90 - φ) / 180 * grid.rows) * grid.cols + (180 + λ) / 360 * grid.cols + 1.0));
+
+    return index;
+  };
+
 };
 
 module.exports = Grid;

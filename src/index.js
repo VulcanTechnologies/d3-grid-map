@@ -22,7 +22,6 @@ var GridMap = function(container, options) {
   var rotateLongitude = 0;
 
   this.container = d3.select(container);
-  var graticule = d3.geo.graticule()();
 
   var rect = this.container.node().getBoundingClientRect();
   this.width = rect.width | 0;
@@ -35,14 +34,6 @@ var GridMap = function(container, options) {
   this.graticuleColor = this.options.graticuleColor || 'rgba(255,255,255,.3)';
 
   self.area = 1; // minimum area threshold for simplification
-
-  var simplify = d3.geo.transform({
-    point: function(x, y, z) {
-      if (z >= self.area) {
-        this.stream.point(x, y);
-      }
-    }
-  });
 
   this.dispatch = d3.geo.GridMap.dispatch; //singleton
 
@@ -58,12 +49,27 @@ var GridMap = function(container, options) {
     .style('top', '0px')
     .style('left', '0px');
 
+  this.canvas.data([0]); // bind z-index to data() for layer ordering. base canvas is 0
+
   this.context = this.canvas.node().getContext('2d');
 
-  var hud = null;
-  if (options.hud) {
-    hud = new HUD(this);
-  }
+  var simplify = d3.geo.transform({
+    point: function(x, y, z) {
+      if (z >= self.area) {
+        this.stream.point(x, y);
+      }
+    }
+  });
+
+  this.simplifyingPath = d3.geo.path()
+    .projection({
+      stream: function(s) {return simplify.stream(self.projection.stream(s));}
+    });
+
+  this.path = d3.geo.path()
+    .projection(this.projection);
+
+  var hud = new HUD(this, options.hud);
 
   this.colorScale = this.options.colorScale || defaultColorScale;
 
@@ -71,20 +77,12 @@ var GridMap = function(container, options) {
     this.options.zoomLevels = [1, 2, 4, 8];
   }
 
-  if (this.options.legend && hud) {
+  if (this.options.legend) {
     this.options.context = hud.context;
     this.options.colorScale = this.colorScale;
     this.legend = new Legend(this.options);
     this.legend.draw();
   }
-
-  this.simplifyingPath = d3.geo.path()
-    .projection({stream: function(s) {return simplify.stream(self.projection.stream(s));}})
-    .context(this.context);
-
-  this.path = d3.geo.path()
-    .projection(this.projection)
-    .context(this.context);
 
   this.init = function() {
     this.initEvents();
@@ -129,7 +127,7 @@ var GridMap = function(container, options) {
       }
     }
     var normalizedValue = cell / 255;
-    if (hud && cellId) {
+    if (options.hud && cellId) {
       hud.update(cellId, coords, normalizedValue);
     }
     if (self.legend) {
@@ -145,8 +143,8 @@ var GridMap = function(container, options) {
       .on('dragstart', function () {
       })
       .on('drag', function () {
-        rotateLongitude += (100 * d3.event.dx / scale);
-        rotateLatitude -= (100 * d3.event.dy / scale);
+        rotateLongitude += 100 * d3.event.dx / scale;
+        rotateLatitude -= 100 * d3.event.dy / scale;
         self.projection.rotate([rotateLongitude, rotateLatitude]);
         self.drawAnimation();
       })
@@ -186,100 +184,9 @@ var GridMap = function(container, options) {
 
     //draw world background (the sea)
     this.context.beginPath();
-    this.path({type: 'Sphere'});
+    this.path.context(this.context)({type: 'Sphere'});
     this.context.fillStyle = this.seaColor;
     this.context.fill();
-  };
-
-  this.drawGeoJSONLayer = function(layer) {
-
-    self.context.beginPath();
-
-    if (layer.simplified) {
-      self.simplifyingPath(layer.json);
-    } else {
-      self.path(layer.json);
-    }
-    self.context.strokeStyle = layer.options.strokeColor;
-    self.context.lineWidth = 0.5;
-    self.context.stroke();
-
-    self.context.fillStyle = layer.options.fillColor;
-    self.context.fill();
-  };
-
-  this.screenCoordinatesToGridIndex = function(coords, projection, grid) {
-    /**
-      * Returns the index of grid.data which corresponds to the screen coordinates
-      * given projection.
-      *
-      * @param {Array} coords [x,y]
-      * @param {Projection} d3.geo.projection
-      * @param {Grid} grid
-      * @return {Number} index in grid.data
-      */
-
-    var p = projection.invert(coords);
-
-    if (!p) {
-      return;
-    }
-
-    var λ = p[0];
-    var φ = p[1];
-
-    if (!(λ <= 180 && λ >= -180 && φ <= 90 && φ >= -90)) {
-      return;
-    }
-
-    // Add 1 because cell IDs are defined to be 1-based instead
-    // of our 0-based arrays.
-    var index = ~~((~~((90 - φ) / 180 * grid.rows) * grid.cols + (180 + λ) / 360 * grid.cols + 1.0));
-
-    return index;
-  };
-
-  this.renderGridToCanvas = function(grid, indexMap) {
-
-    var image = this.context.getImageData(0, 0, this.width, this.height);
-    var imageData = image.data;
-
-    for (var i=0; i<indexMap.length; i++) {
-      var imageIndexT4 = i*4;
-      var gridIndexT4 = indexMap[i]*4;
-
-      if (grid.data[gridIndexT4+3] === 0) {
-        // skip where alpha is 0;
-        continue;
-      }
-      imageData[imageIndexT4] = grid.data[gridIndexT4];
-      imageData[imageIndexT4++] = grid.data[gridIndexT4++];
-      imageData[imageIndexT4++] = grid.data[gridIndexT4++];
-      imageData[imageIndexT4++] = grid.data[gridIndexT4++];
-    }
-
-    self.context.putImageData(image, 0, 0);
-  };
-
-  this.drawGrid = function(grid) {
-    var indexMap = [];
-    for (var y = 0; y < this.height; y++) {
-      for (var x = 0; x < this.width; x++) {
-        var imageIndex = (x + this.width * y);
-        var gridIndex = this.screenCoordinatesToGridIndex([x,y], self.projection, grid);
-        indexMap[imageIndex] = gridIndex;
-      }
-    }
-    this.renderGridToCanvas(grid, indexMap);
-  };
-
-  this.drawGraticule = function() {
-    this.context.beginPath();
-    this.path(graticule);
-    this.context.closePath();
-    this.context.lineWidth = 1;
-    this.context.strokeStyle = this.graticuleColor;
-    this.context.stroke();
   };
 
   this.drawLayers = function (animating) {
@@ -287,15 +194,9 @@ var GridMap = function(container, options) {
       var layer = self.layers[i];
       var doRender = !animating || layer.options.renderOnAnimate;
       if (doRender) {
-        if (layer.grid) {
-          self.drawGrid(layer.grid);
-        } else if (layer.json) {
-          if (layer.json.type === 'Topology') {
-            self.drawTopoJSONLayer(layer);
-          } else {
-            self.drawGeoJSONLayer(layer);
-          }
-        }
+        layer.draw();
+      } else {
+        layer.clear();
       }
     }
   };
@@ -306,8 +207,7 @@ var GridMap = function(container, options) {
 
     self.drawWorld();
     self.drawLayers();
-    self.drawGraticule();
-
+    hud.draw();
     self.dispatch.drawEnd();
   };
 
@@ -316,7 +216,7 @@ var GridMap = function(container, options) {
 
     self.drawWorld();
     self.drawLayers(animating);
-    self.drawGraticule();
+    hud.draw();
   };
 
   var debounce = function(fn, timeout) {
@@ -333,7 +233,6 @@ var GridMap = function(container, options) {
 
   this._resize = function() {
 
-    console.log('resizing ', self);
     var rect = self.container.node().getBoundingClientRect();
     self.width = rect.width | 0;
     self.height = rect.height | 0;
@@ -341,14 +240,15 @@ var GridMap = function(container, options) {
     self.canvas.attr('width', self.width);
     self.canvas.attr('height', self.height);
 
-    if (hud) {
-      hud.resize(self.width, self.height);
+    for (var i=0; i<self.layers.length; i++ ) {
+      self.layers[i].resize(self.width, self.height);
     }
 
     self.projection
       .translate([self.width/2, self.height/2])
       .clipExtent([[0, 0], [self.width, self.height]]);
 
+    hud.resize(self.width, self.height);
     self.draw();
   };
 
@@ -373,7 +273,7 @@ var GridMap = function(container, options) {
       *   fillColor - fill color for vector layers
       *   strokeColor - stroke color for vector layers
       */
-    var layer = new Layer(options);
+    var layer = new Layer(self, options);
 
     if (data.constructor === ArrayBuffer) {
       var grid = DataImport.arrayBufferToGrid(data, options.gridSize, self.colorScale);
@@ -392,7 +292,7 @@ var GridMap = function(container, options) {
       layer.json = data;
     }
     self.layers.push(layer);
-    self.layers.sort(function(a,b) {return a.options.zIndex-b.options.zIndex;});
+    this.container.selectAll('canvas').sort();
     self.draw();
 
     return layer;

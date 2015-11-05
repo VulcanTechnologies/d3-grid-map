@@ -44,8 +44,8 @@
           map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
 
           options = JSON.parse(JSON.stringify(options)); // deep copy
-          // options.legend = false;
           options.projection = d3.geo.mercator();
+          options.legend = false;
           var map2 = new d3.geo.GridMap('#map2', options);
 
           options = JSON.parse(JSON.stringify(options)); // deep copy
@@ -80,7 +80,7 @@
             var layer = map1.addLayer(eez, {
               strokeColor: 'rgba(0,0,0,1)',
               fillColor: 'rgba(0,0,0,.2)',
-              zIndex: 2,
+              zIndex: 9,
               renderOnAnimate: true
             });
           });

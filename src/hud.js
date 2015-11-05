@@ -4,23 +4,32 @@ var HUD = function(gridMap) {
   var options = gridMap.options.hud || {};
 
   var canvas = gridMap.container
-    .append('canvas')
+    .append('canvas');
+
+  canvas
     .style('position', 'absolute')
     .style('top', '0px')
     .style('left', '0px')
-    .style('z-index', '2');
+    .data([Number.MAX_VALUE]); // top z-index
 
   var context = canvas.node().getContext('2d');
   this.context = context;
 
-  this.path = d3.geo.path()
-    .projection(gridMap.projection)
-    .context(this.context);
+  var graticule = d3.geo.graticule()();
 
   this.resize = function(width, height) {
     canvas.attr('width', width);
     canvas.attr('height', height);
-  },
+  };
+
+  this.drawGraticule = function() {
+    context.beginPath();
+    gridMap.path.context(context)(graticule);
+    context.closePath();
+    context.lineWidth = 1;
+    context.strokeStyle = gridMap.graticuleColor;
+    context.stroke();
+  };
 
   this.update = function(cellId, coords, cellValue) {
     var coordFormat = d3.format(' >+7.3f');
@@ -41,6 +50,8 @@ var HUD = function(gridMap) {
     gradient.addColorStop(1, 'rgba(0,0,0,1.0)');
 
     context.clearRect(0, 0, width, height);
+
+    this.drawGraticule();
 
     context.save();
     context.translate(0, height-(h));
@@ -80,9 +91,14 @@ var HUD = function(gridMap) {
     context.beginPath();
     context.strokeStyle = 'white';
     context.lineWidth = 2;
-    this.path(feature);
+    gridMap.path.context(context)(feature);
     context.stroke();
 
+  };
+
+  this.draw = function() {
+    context.clearRect(0, 0, gridMap.width, gridMap.height);
+    this.drawGraticule();
   };
 
 };
