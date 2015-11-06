@@ -15,6 +15,12 @@
     "type": "git",
     "url": "git://github.com/SeaAroundUs/d3-grid-map.git"
   },
+  "ignore": [
+    "data",
+    "src",
+    "bower_components",
+    "node_modules"
+  ],
   "dependencies": {
     "d3": "~3.4",
     "topojson": "~1.6",
@@ -23,5 +29,5 @@
   "authors": [
     "Joseph Sheedy <joseph.sheedy@gmail.com>"
   ],
-  "license": "MIT"
+  "license": "https://github.com/VulcanTechnologies/d3-grid-map/blob/master/LICENSE"
 }

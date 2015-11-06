@@ -1,6 +1,6 @@
 {
   "name": "d3-grid-map",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Creates a map in a container using d3 for plotting gridded data sets",
   "main": "d3-grid-map.js",
   "keywords": [
@@ -11,7 +11,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/SeaAroundUs/d3-grid-map.git"
+    "url": "git://github.com/VulcanTechnologies/d3-grid-map.git"
   },
   "dependencies": {
     "d3": "~3.4",
