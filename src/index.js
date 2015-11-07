@@ -18,9 +18,6 @@ var defaultColorScale = d3.scale.quantize()
 var GridMap = function(container, options) {
   var self = this;
 
-  var rotateLatitude = 0;
-  var rotateLongitude = 0;
-
   this.container = d3.select(container);
 
   var rect = this.container.node().getBoundingClientRect();
@@ -33,6 +30,10 @@ var GridMap = function(container, options) {
   this.seaColor = this.options.seaColor || 'rgba(21,98,180,.8)';
   this.graticuleColor = this.options.graticuleColor || 'rgba(255,255,255,.3)';
 
+
+  var rotateLatitude = -this.options.latitude || 0;
+  var rotateLongitude = -this.options.longitude || 0;
+  var scale = this.options.scale || 150;
   self.area = 1; // minimum area threshold for simplification
 
   this.dispatch = d3.geo.GridMap.dispatch; //singleton
@@ -41,7 +42,8 @@ var GridMap = function(container, options) {
   this.projection
     .translate([this.width/2, this.height/2])
     .clipExtent([[0, 0], [self.width, self.height]])
-    .precision(0.1);
+    .scale(scale)
+    .rotate([rotateLongitude, rotateLatitude]);
 
   this.canvas = this.container
     .append('canvas')
@@ -138,7 +140,6 @@ var GridMap = function(container, options) {
 
   this.initEvents = function() {
 
-    var scale = 150;
     var drag = d3.behavior.drag()
       .on('dragstart', function () {
       })

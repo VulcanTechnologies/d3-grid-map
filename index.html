@@ -44,12 +44,16 @@
           map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
 
           options = JSON.parse(JSON.stringify(options)); // deep copy
+          options.longitude = -125
           options.projection = d3.geo.mercator();
           options.legend = false;
+          options.scale = 100;
           var map2 = new d3.geo.GridMap('#map2', options);
 
           options = JSON.parse(JSON.stringify(options)); // deep copy
+          options.latitude = 47;
           options.hud = null;
+          options.scale = 200;
           var orthographicProjection = d3.geo.orthographic().clipAngle(90);
           options.projection = orthographicProjection;
           var map3 = new d3.geo.GridMap('#map3', options);
