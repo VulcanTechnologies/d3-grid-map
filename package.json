@@ -1,6 +1,6 @@
 {
   "name": "d3-grid-map",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Creates a map in a container using d3 for plotting gridded data sets",
   "main": "d3-grid-map.js",
   "keywords": [
