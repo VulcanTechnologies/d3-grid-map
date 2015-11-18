@@ -1,3 +1,13 @@
+// IE 10 shim
+if(window.CanvasPixelArray) {
+    CanvasPixelArray.prototype.set = function(arr) {
+        var l=this.length, i=0;
+        for(;i<l;i++) {
+            this[i] = arr[i];
+        }
+    };
+}
+
 var Layer = function(gridMap, options) {
 
   this.options = options || {};
@@ -38,24 +48,20 @@ var Layer = function(gridMap, options) {
   this.renderGridToCanvas = function(grid, indexMap) {
 
     var image = context.getImageData(0, 0, gridMap.width, gridMap.height);
-    var imageData = image.data;
+    var buf = new ArrayBuffer(image.data.length);
+    var buf8 = new Uint8ClampedArray(buf);
+    var imageData = new Uint32Array(buf);
+
+    var gridData = new Uint32Array(grid.data.buffer);
 
     for (var i=0; i<indexMap.length; i++) {
-
       if ( !indexMap[i]) {
         // skip where grid is undef
         continue;
       }
-
-      var imageIndexT4 = i*4;
-      var gridIndexT4 = indexMap[i]*4;
-
-      imageData[imageIndexT4] = grid.data[gridIndexT4];
-      imageData[++imageIndexT4] = grid.data[++gridIndexT4];
-      imageData[++imageIndexT4] = grid.data[++gridIndexT4];
-      imageData[++imageIndexT4] = grid.data[++gridIndexT4];
+      imageData[i] = gridData[indexMap[i]]
     }
-
+    image.data.set(buf8);
     context.putImageData(image, 0, 0);
   };
 
