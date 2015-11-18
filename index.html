@@ -15,13 +15,15 @@
         </style>
     </head>
     <body>
+        <a href="https://github.com/VulcanTechnologies/d3-grid-map"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/652c5b9acfaddf3a9c326fa6bde407b87f7be0f4/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6f72616e67655f6666373630302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"></a>
+
         <h1>d3-grid-map</h1>
         <p>D3 gridded data set mapper
         <p>
             <a href="https://github.com/VulcanTechnologies/d3-grid-map">d3-grid-map on GitHub</a>
         </p>
         <p>
-        This package will create a geographic map using D3 in the container of your choosing, which will plot a gridded global data set passed to it.
+        This package will create a geographic map using D3 using any supported projection. Arbitrary numbers of layers of gridded binary data or geojson/topojson can be added.   
         </p>
         <p>
             Country outlines can be drawn from the included countries.topojson data.
@@ -58,6 +60,9 @@
 
           options.projection = d3.geo.orthographic().clipAngle(90);
           options.seaColor = 'rgba(0,0,255,1)';
+          options.scale = 250;
+          options.latitude = -17;
+          options.longitude = 150;
           var map3 = new d3.geo.GridMap('#map3', options);
 
           d3.json('countries.topojson', function(error, countries) {
