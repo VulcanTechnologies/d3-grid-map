@@ -48,7 +48,14 @@ var Layer = function(gridMap, options) {
   this.renderGridToCanvas = function(grid, indexMap) {
 
     var image = context.getImageData(0, 0, gridMap.width, gridMap.height);
-    var buf = new ArrayBuffer(image.data.length);
+    var buf = null;
+    if (image.data.buffer) {
+      // modern browsers can access the buffer directly
+      buf = image.data.buffer;
+    } else {
+      // make a new one
+      buf = new ArrayBuffer(image.data.length);
+    }
     var buf8 = new Uint8ClampedArray(buf);
     var imageData = new Uint32Array(buf);
 
@@ -61,7 +68,10 @@ var Layer = function(gridMap, options) {
       }
       imageData[i] = gridData[indexMap[i]]
     }
-    image.data.set(buf8);
+    if (!image.data.buffer) {
+      // old browsers
+      image.data.set(buf8);
+    }
     context.putImageData(image, 0, 0);
   };
 
