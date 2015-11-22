@@ -112,12 +112,12 @@ var Grid = function(data, gridSize, rawData) {
       gridMap.height
     ].join('-');
 
-    var indexMap = [];
+    var indexMap = null;
     var cache = gridMap; // do something better for caching
     if (cache.indexMapCache && cache.indexMapCache[cacheKey]) {
-      console.log('indexMap cache hit!');
       indexMap = cache.indexMapCache[cacheKey];
     } else {
+      indexMap = new Uint32Array(gridMap.height * gridMap.width);
       cache.indexMapCache = {};
       for (var y = 0; y < gridMap.height; y++) {
         for (var x = 0; x < gridMap.width; x++) {

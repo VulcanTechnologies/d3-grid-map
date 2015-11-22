@@ -56,20 +56,18 @@ var Layer = function(gridMap, options) {
       // make a new one
       buf = new ArrayBuffer(image.data.length);
     }
-    var buf8 = new Uint8ClampedArray(buf);
-    var imageData = new Uint32Array(buf);
 
+    var imageData = new Uint32Array(buf);
     var gridData = new Uint32Array(grid.data.buffer);
 
-    for (var i=0; i<indexMap.length; i++) {
-      if ( !indexMap[i]) {
-        // skip where grid is undef
-        continue;
-      }
-      imageData[i] = gridData[indexMap[i]]
-    }
+    indexMap
+      .map(function(x,i) {
+          imageData[i] = gridData[x];
+      });
+
     if (!image.data.buffer) {
       // old browsers
+      var buf8 = new Uint8ClampedArray(buf);
       image.data.set(buf8);
     }
     context.putImageData(image, 0, 0);
