@@ -118,14 +118,14 @@ var Grid = function(data, gridSize, rawData) {
       indexMap = cache.indexMapCache[cacheKey];
     } else {
       indexMap = new Uint32Array(gridMap.height * gridMap.width);
-      cache.indexMapCache = {};
-      for (var y = 0; y < gridMap.height; y++) {
-        for (var x = 0; x < gridMap.width; x++) {
-          var imageIndex = (x + gridMap.width * y);
-          var gridIndex = this.screenCoordinatesToGridIndex([x,y], gridMap.projection);
-          indexMap[imageIndex] = gridIndex;
-        }
+
+      var w = gridMap.width;
+      var h = gridMap.height;
+      for (var i = 0, lim = h*w; i<lim; i++) {
+        indexMap[i] = this.screenCoordinatesToGridIndex([i%w, i/w], gridMap.projection);
       }
+
+      cache.indexMapCache = {};
       cache.indexMapCache[cacheKey] = indexMap;
     }
     return indexMap;
