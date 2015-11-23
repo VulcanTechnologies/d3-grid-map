@@ -27,8 +27,12 @@
           var w = 720;
           var h = 360;
 
+          var colorScale = d3.scale.quantile()
+            .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
+
           var options = {
-            legend: true,
+            legend: false,
+            colorScale: colorScale,
             hud: {
               fontSize: 20,
               fontColor: 'white',
@@ -43,16 +47,13 @@
           map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
           map1.dispatch.on('drawEnd', function() {console.log('drawing Ended'); });
 
-          options = JSON.parse(JSON.stringify(options)); // deep copy
           options.longitude = -125
           options.projection = d3.geo.mercator();
           options.legend = false;
           options.scale = 100;
           var map2 = new d3.geo.GridMap('#map2', options);
 
-          options = JSON.parse(JSON.stringify(options)); // deep copy
           options.latitude = 47;
-          options.hud = null;
           options.scale = 200;
           var orthographicProjection = d3.geo.orthographic().clipAngle(90);
           options.projection = orthographicProjection;
@@ -70,13 +71,14 @@
           });
 
           // add a packed binary data set to a map
-          d3.xhr('data/packed-binary.dat')
+          d3.xhr('data/float32.dat')
             .responseType('arraybuffer')
             .get(function(error, xhr) {
-              var buff = xhr.response;
+              var data = new Float32Array(xhr.response);
+              colorScale.domain(data);
               var layerOptions = {gridSize: [w, h], zIndex: 3, renderOnAnimate: false};
-              map1.addLayer(buff, layerOptions);
-              map3.addLayer(buff, layerOptions);
+              map1.addLayer(data, layerOptions);
+              map3.addLayer(data, layerOptions);
             });
 
           // add a geojson dataset to a map
@@ -90,28 +92,19 @@
           });
 
           // create some fake gridded data
-          var data = new Uint8ClampedArray(w * h * 4);
+          var buf = new ArrayBuffer(w * h *4);
+          var dataFloat32 = new Float32Array(buf);
           var index = -1;
-          var r = 30;
-          for (var j=0; j<h; j++) {
-              for (var i=0; i<w; i++) {
-                var index = (i + j*w)*4;
-                if (j > 150 && j < 230 && i < 390 && i > 330) {
-                  var z = (Math.sqrt(Math.pow(i-360, 2) + Math.pow(j-180,2)));
-                  data[index] = (z < r) ? ~~(z*9) : 255;
-                  data[index+1] = 0;
-                  data[index+2] = 0;
-                  data[index+3] = (z < r) ? 255: 127;
-                }
-              }
+          for (var i=w*40; i<(w*h - w*40); i++) {
+            dataFloat32[i] = Math.sin(i/dataFloat32.length * 2 * Math.PI);
           }
 
           var fakeGridOptions = {
             gridSize: [w,h],
             renderOnAnimate: false
           };
-
-          map2.addLayer(data, fakeGridOptions);
+          map2.colorScale = d3.scale.linear().domain([0,1]).range(['#000000', '#ffffff']);
+          map2.addLayer(dataFloat32, fakeGridOptions);
 
         </script>
     </body>

@@ -43,7 +43,7 @@ var Data = {
     return geojson;
   },
 
-  arrayBufferToGrid: function(buff, gridSize, colorScale) {
+  packedBinaryArrayBufferToGrid: function(buff, gridSize, colorScale) {
     // given an ArrayBuffer buff containing data in
     // packed binary format, returns a Grid
 
@@ -51,6 +51,8 @@ var Data = {
     // a sequence of Uint32 elements in which the most
     // significant byte is the cell value and the
     // lowest 3 bytes represent the cell ID.
+
+    // this method is being deprecated
 
     var w = gridSize[1];
     var h = gridSize[0];
@@ -80,6 +82,32 @@ var Data = {
       rawData[cellId] = value;
     }
     return new Grid(data, gridSize, rawData);
+  },
+
+  float32ArrayToGrid: function(rawData, gridSize, colorScale) {
+    // given an ArrayBuffer buff containing a 1 dimensional
+    // sequence of 32 bit floats, returns a Grid
+
+    var w = gridSize[1];
+    var h = gridSize[0];
+
+    var colorData = new Uint32Array(w*h);
+
+    for (var i=0, len=rawData.length; i<len; i++) {
+      var value = rawData[i];
+      if(isNaN(value)) {
+        continue;
+      }
+      var color = d3.rgb(colorScale(value));
+
+      colorData[i] = (255 << 24) |
+                     (color.b << 16) |
+                     (color.g << 8) |
+                     color.r;
+
+    }
+
+    return new Grid(colorData, gridSize, rawData);
   },
 
   uInt8ArrayToGeoJSON: function(array) {

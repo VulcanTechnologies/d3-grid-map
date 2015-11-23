@@ -11,7 +11,7 @@ try {
   window.Uint8ClampedArray = Uint8Array;
 }
 
-var defaultColorScale = d3.scale.quantize()
+var defaultColorScale = d3.scale.linear()
   .domain([0,255])
   .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
 
@@ -93,13 +93,13 @@ var GridMap = function(container, options) {
 
   this.getGrid = function() {
     /**
-     * returns 'the' grid
+     * returns the first visible grid
      */
 
-    // FIXME: is picking the first grid good enough?
+    // FIXME: is picking the first visible grid good enough?
     var grid = null;
     for (var i=0; i < this.layers.length; i++) {
-      if (this.layers[i].grid) {
+      if (this.layers[i].grid && this.layers[i].visible) {
         return this.layers[i].grid;
       }
     }
@@ -128,13 +128,12 @@ var GridMap = function(container, options) {
         }
       }
     }
-    var normalizedValue = cell / 255;
     if (options.hud && cellId) {
-      hud.update(cellId, coords, normalizedValue);
+      hud.update(cellId, coords, cell);
     }
     if (self.legend) {
       self.legend.draw();
-      self.legend.highlight(normalizedValue);
+      self.legend.highlight(cell);
     }
   };
 
@@ -273,15 +272,16 @@ var GridMap = function(container, options) {
       *   zIndex - specifies layer stacking order
       *   fillColor - fill color for vector layers
       *   strokeColor - stroke color for vector layers
+      *   draw - whether to redraw GridMap immediately. Default: true
       */
     var layer = new Layer(self, options);
 
-    if (data.constructor === ArrayBuffer) {
-      var grid = DataImport.arrayBufferToGrid(data, options.gridSize, self.colorScale);
-      layer.grid = grid;
+    if (data.constructor === Float32Array) {
+      layer.grid = DataImport.float32ArrayToGrid(data, options.gridSize, self.colorScale);
+
     } else if (data.constructor === Uint8Array || data.constructor === Uint8ClampedArray) {
-      var grid = new Grid(data, options.gridSize);
-      layer.grid = grid;
+      layer.grid = new Grid(data, options.gridSize);
+
     } else {
       // assume JSON
       if (data.type === 'Topology') {
@@ -294,7 +294,10 @@ var GridMap = function(container, options) {
     }
     self.layers.push(layer);
     this.container.selectAll('canvas').sort();
-    self.draw();
+
+    if (options && (options.renderOnAdd || options.renderOnAdd == undefined)) {
+      self.draw();
+    }
 
     return layer;
   };

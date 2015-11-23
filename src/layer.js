@@ -109,10 +109,6 @@ var Layer = function(gridMap, options) {
 
     this.clear();
 
-    if (!this.visible) {
-      return;
-    }
-
     if (this.grid) {
       this.drawGrid(this.grid);
     } else if (this.json) {

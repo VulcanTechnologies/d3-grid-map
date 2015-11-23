@@ -44,7 +44,7 @@ var Data = {
     return geojson;
   },
 
-  arrayBufferToGrid: function(buff, gridSize, colorScale) {
+  packedBinaryArrayBufferToGrid: function(buff, gridSize, colorScale) {
     // given an ArrayBuffer buff containing data in
     // packed binary format, returns a Grid
 
@@ -52,6 +52,8 @@ var Data = {
     // a sequence of Uint32 elements in which the most
     // significant byte is the cell value and the
     // lowest 3 bytes represent the cell ID.
+
+    // this method is being deprecated
 
     var w = gridSize[1];
     var h = gridSize[0];
@@ -81,6 +83,32 @@ var Data = {
       rawData[cellId] = value;
     }
     return new Grid(data, gridSize, rawData);
+  },
+
+  float32ArrayToGrid: function(rawData, gridSize, colorScale) {
+    // given an ArrayBuffer buff containing a 1 dimensional
+    // sequence of 32 bit floats, returns a Grid
+
+    var w = gridSize[1];
+    var h = gridSize[0];
+
+    var colorData = new Uint32Array(w*h);
+
+    for (var i=0, len=rawData.length; i<len; i++) {
+      var value = rawData[i];
+      if(isNaN(value)) {
+        continue;
+      }
+      var color = d3.rgb(colorScale(value));
+
+      colorData[i] = (255 << 24) |
+                     (color.b << 16) |
+                     (color.g << 8) |
+                     color.r;
+
+    }
+
+    return new Grid(colorData, gridSize, rawData);
   },
 
   uInt8ArrayToGeoJSON: function(array) {
@@ -244,20 +272,20 @@ var Grid = function(data, gridSize, rawData) {
       gridMap.height
     ].join('-');
 
-    var indexMap = [];
+    var indexMap = null;
     var cache = gridMap; // do something better for caching
     if (cache.indexMapCache && cache.indexMapCache[cacheKey]) {
-      console.log('indexMap cache hit!');
       indexMap = cache.indexMapCache[cacheKey];
     } else {
-      cache.indexMapCache = {};
-      for (var y = 0; y < gridMap.height; y++) {
-        for (var x = 0; x < gridMap.width; x++) {
-          var imageIndex = (x + gridMap.width * y);
-          var gridIndex = this.screenCoordinatesToGridIndex([x,y], gridMap.projection);
-          indexMap[imageIndex] = gridIndex;
-        }
+      indexMap = new Uint32Array(gridMap.height * gridMap.width);
+
+      var w = gridMap.width;
+      var h = gridMap.height;
+      for (var i = 0, lim = h*w; i<lim; i++) {
+        indexMap[i] = this.screenCoordinatesToGridIndex([i%w, i/w], gridMap.projection);
       }
+
+      cache.indexMapCache = {};
       cache.indexMapCache[cacheKey] = indexMap;
     }
     return indexMap;
@@ -389,7 +417,7 @@ try {
   window.Uint8ClampedArray = Uint8Array;
 }
 
-var defaultColorScale = d3.scale.quantize()
+var defaultColorScale = d3.scale.linear()
   .domain([0,255])
   .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
 
@@ -471,13 +499,13 @@ var GridMap = function(container, options) {
 
   this.getGrid = function() {
     /**
-     * returns 'the' grid
+     * returns the first visible grid
      */
 
-    // FIXME: is picking the first grid good enough?
+    // FIXME: is picking the first visible grid good enough?
     var grid = null;
     for (var i=0; i < this.layers.length; i++) {
-      if (this.layers[i].grid) {
+      if (this.layers[i].grid && this.layers[i].visible) {
         return this.layers[i].grid;
       }
     }
@@ -506,13 +534,12 @@ var GridMap = function(container, options) {
         }
       }
     }
-    var normalizedValue = cell / 255;
     if (options.hud && cellId) {
-      hud.update(cellId, coords, normalizedValue);
+      hud.update(cellId, coords, cell);
     }
     if (self.legend) {
       self.legend.draw();
-      self.legend.highlight(normalizedValue);
+      self.legend.highlight(cell);
     }
   };
 
@@ -651,15 +678,16 @@ var GridMap = function(container, options) {
       *   zIndex - specifies layer stacking order
       *   fillColor - fill color for vector layers
       *   strokeColor - stroke color for vector layers
+      *   draw - whether to redraw GridMap immediately. Default: true
       */
     var layer = new Layer(self, options);
 
-    if (data.constructor === ArrayBuffer) {
-      var grid = DataImport.arrayBufferToGrid(data, options.gridSize, self.colorScale);
-      layer.grid = grid;
+    if (data.constructor === Float32Array) {
+      layer.grid = DataImport.float32ArrayToGrid(data, options.gridSize, self.colorScale);
+
     } else if (data.constructor === Uint8Array || data.constructor === Uint8ClampedArray) {
-      var grid = new Grid(data, options.gridSize);
-      layer.grid = grid;
+      layer.grid = new Grid(data, options.gridSize);
+
     } else {
       // assume JSON
       if (data.type === 'Topology') {
@@ -672,7 +700,10 @@ var GridMap = function(container, options) {
     }
     self.layers.push(layer);
     this.container.selectAll('canvas').sort();
-    self.draw();
+
+    if (options && (options.renderOnAdd || options.renderOnAdd == undefined)) {
+      self.draw();
+    }
 
     return layer;
   };
@@ -796,20 +827,17 @@ var Layer = function(gridMap, options) {
       // make a new one
       buf = new ArrayBuffer(image.data.length);
     }
-    var buf8 = new Uint8ClampedArray(buf);
-    var imageData = new Uint32Array(buf);
 
+    var imageData = new Uint32Array(buf);
     var gridData = new Uint32Array(grid.data.buffer);
 
-    for (var i=0; i<indexMap.length; i++) {
-      if ( !indexMap[i]) {
-        // skip where grid is undef
-        continue;
-      }
-      imageData[i] = gridData[indexMap[i]]
+    for (var i=0, lim=indexMap.length; i<lim; i++) {
+      imageData[i] = gridData[indexMap[i]];
     }
+
     if (!image.data.buffer) {
       // old browsers
+      var buf8 = new Uint8ClampedArray(buf);
       image.data.set(buf8);
     }
     context.putImageData(image, 0, 0);
@@ -851,10 +879,6 @@ var Layer = function(gridMap, options) {
   this.draw = function() {
 
     this.clear();
-
-    if (!this.visible) {
-      return;
-    }
 
     if (this.grid) {
       this.drawGrid(this.grid);
