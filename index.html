@@ -36,7 +36,7 @@
         <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
         <script src="https://cdn.rawgit.com/d3/d3-geo-projection/master/d3.geo.projection.js"></script>
         <script src="https://cdn.rawgit.com/mbostock/topojson/master/topojson.js"></script>
-        <script src="https://cdn.rawgit.com/VulcanTechnologies/d3-grid-map/master/d3-grid-map.js"></script>
+        <script src="https://cdn.rawgit.com/VulcanTechnologies/d3-grid-map/6ff15fa730393d2f0f346f78486fc00a4ec7aa36/d3-grid-map.min.js"></script>
 
         <script type="text/javascript">
 
@@ -49,7 +49,8 @@
               verticalOffset: 5
             },
             onCellHover: function(feature) { console.log('hovering over ', feature);},
-            legend: true
+            legend: false,
+            colorScale: d3.scale.quantile().range(['#fff7f3','#fde0dd','#fcc5c0','#fa9fb5','#f768a1','#dd3497','#ae017e','#7a0177','#49006a'])
           };
 
           var map1 = new d3.geo.GridMap('#map1', options);
@@ -80,14 +81,16 @@
             });
           });
 
-          // add a packed binary data set to a map
-          d3.xhr('data/packed-binary.dat')
+          // add a float32 array data set to a map
+          d3.xhr('data/float32.dat')
             .responseType('arraybuffer')
             .get(function(error, xhr) {
-              var buff = xhr.response;
+              var data = new Float32Array(xhr.response);
+              map1.colorScale.domain(data);
+              map3.colorScale.domain(data);
               var layerOptions = {gridSize: [w, h], zIndex: 3, renderOnAnimate: false};
-              map1.addLayer(buff, layerOptions);
-              map3.addLayer(buff, layerOptions);
+              map1.addLayer(data, layerOptions);
+              map3.addLayer(data, layerOptions);
             });
 
           map1.dispatch.on('drawStart', function() {console.log('drawing Started'); });
