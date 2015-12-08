@@ -27,12 +27,11 @@
           var w = 720;
           var h = 360;
 
-          var colorScale = d3.scale.quantile()
+          var quantileScale = d3.scale.quantile()
             .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]);
 
           var options = {
             legend: false,
-            colorScale: colorScale,
             hud: {
               fontSize: 20,
               fontColor: 'white',
@@ -75,9 +74,19 @@
             .responseType('arraybuffer')
             .get(function(error, xhr) {
               var data = new Float32Array(xhr.response);
-              colorScale.domain(data);
-              var layerOptions = {gridSize: [w, h], zIndex: 3, renderOnAnimate: false};
-              map1.addLayer(data, layerOptions);
+              quantileScale.domain(data);
+              var layerOptions = {
+                gridSize: [w, h],
+                zIndex: 3,
+                renderOnAnimate: false,
+                colorScale: quantileScale
+              };
+              // map1.addLayer(data, layerOptions);
+
+              layerOptions.colorScale = d3.scale.threshold()
+                .domain([1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
+                .range(['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#fc8d59','#ef6548','#d7301f','#b30000', '#7f0000']);
+              layerOptions.colorScaleDiscrete = true;
               map3.addLayer(data, layerOptions);
             });
 
@@ -101,10 +110,10 @@
 
           var fakeGridOptions = {
             gridSize: [w,h],
-            renderOnAnimate: false
+            renderOnAnimate: false,
+            colorScale: d3.scale.linear().domain([0,1]).range(['#000000', '#ffffff'])
           };
-          map2.colorScale = d3.scale.linear().domain([0,1]).range(['#000000', '#ffffff']);
-          map2.addLayer(dataFloat32, fakeGridOptions);
+          // map2.addLayer(dataFloat32, fakeGridOptions);
 
         </script>
     </body>

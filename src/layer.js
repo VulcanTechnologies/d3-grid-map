@@ -58,10 +58,9 @@ var Layer = function(gridMap, options) {
     }
 
     var imageData = new Uint32Array(buf);
-    var gridData = new Uint32Array(grid.data.buffer);
 
     for (var i=0, lim=indexMap.length; i<lim; i++) {
-      imageData[i] = gridData[indexMap[i]];
+      imageData[i] = grid.data[indexMap[i]];
     }
 
     if (!image.data.buffer) {

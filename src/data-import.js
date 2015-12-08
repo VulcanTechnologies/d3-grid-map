@@ -1,4 +1,5 @@
 var Grid = require('./grid.js');
+var Utils = require('./utils.js');
 
 var Data = {
   arrayBufferToGeoJSON: function(buff) {
@@ -84,8 +85,8 @@ var Data = {
     return new Grid(data, gridSize, rawData);
   },
 
-  float32ArrayToGrid: function(rawData, gridSize, colorScale) {
-    // given an ArrayBuffer buff containing a 1 dimensional
+  arrayToGrid: function(rawData, gridSize, colorScale) {
+    // given an array containing a 1 dimensional
     // sequence of 32 bit floats, returns a Grid
 
     var w = gridSize[1];
@@ -93,18 +94,21 @@ var Data = {
 
     var colorData = new Uint32Array(w*h);
 
+    var colorScaleType = typeof(colorScale(0));
+
     for (var i=0, len=rawData.length; i<len; i++) {
       var value = rawData[i];
-      if(isNaN(value)) {
+      if(value != value) { // cheaper isNaN
         continue;
       }
-      var color = d3.rgb(colorScale(value));
+      var color = colorScale(value);
+      if (colorScaleType === 'string') {
+        // colorScale returned a color string
+        // instead of a packed 32 bit int
+        color = Utils.colorStringToUint32(color);
+      }
 
-      colorData[i] = (255 << 24) |
-                     (color.b << 16) |
-                     (color.g << 8) |
-                     color.r;
-
+      colorData[i] = color;
     }
 
     return new Grid(colorData, gridSize, rawData);

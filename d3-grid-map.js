@@ -1,5 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var Grid = require('./grid.js');
+var Utils = require('./utils.js');
 
 var Data = {
   arrayBufferToGeoJSON: function(buff) {
@@ -85,8 +86,8 @@ var Data = {
     return new Grid(data, gridSize, rawData);
   },
 
-  float32ArrayToGrid: function(rawData, gridSize, colorScale) {
-    // given an ArrayBuffer buff containing a 1 dimensional
+  arrayToGrid: function(rawData, gridSize, colorScale) {
+    // given an array containing a 1 dimensional
     // sequence of 32 bit floats, returns a Grid
 
     var w = gridSize[1];
@@ -94,18 +95,21 @@ var Data = {
 
     var colorData = new Uint32Array(w*h);
 
+    var colorScaleType = typeof(colorScale(0));
+
     for (var i=0, len=rawData.length; i<len; i++) {
       var value = rawData[i];
-      if(isNaN(value)) {
+      if(value != value) { // cheaper isNaN
         continue;
       }
-      var color = d3.rgb(colorScale(value));
+      var color = colorScale(value);
+      if (colorScaleType === 'string') {
+        // colorScale returned a color string
+        // instead of a packed 32 bit int
+        color = Utils.colorStringToUint32(color);
+      }
 
-      colorData[i] = (255 << 24) |
-                     (color.b << 16) |
-                     (color.g << 8) |
-                     color.r;
-
+      colorData[i] = color;
     }
 
     return new Grid(colorData, gridSize, rawData);
@@ -157,7 +161,7 @@ var Data = {
 
 module.exports = Data;
 
-},{"./grid.js":2}],2:[function(require,module,exports){
+},{"./grid.js":2,"./utils.js":7}],2:[function(require,module,exports){
 var Grid = function(data, gridSize, rawData) {
   // represents a gridded data set.  rawData should be an object
   // mapping cellId to cell value
@@ -404,11 +408,12 @@ var HUD = function(gridMap) {
 module.exports = HUD;
 
 },{}],4:[function(require,module,exports){
+var DataImport = require('./data-import.js');
 var Grid = require('./grid.js');
 var HUD = require('./hud.js');
 var Layer = require('./layer.js');
 var Legend = require('./legend.js');
-var DataImport = require('./data-import.js');
+var Utils = require('./utils.js');
 
 try {
   /* fake it for IE10 */
@@ -499,15 +504,19 @@ var GridMap = function(container, options) {
 
   this.getGrid = function() {
     /**
-     * returns the first visible grid
+     * returns the first visible grid, or an array of grids if more than one
      */
 
-    // FIXME: is picking the first visible grid good enough?
-    var grid = null;
+    var grids = [];
     for (var i=0; i < this.layers.length; i++) {
       if (this.layers[i].grid && this.layers[i].visible) {
-        return this.layers[i].grid;
+        grids.push(this.layers[i].grid);
       }
+    }
+    if (grids.length === 1) {
+      return grids[0];
+    } else if (grids.length > 0) {
+      return grids;
     }
   };
 
@@ -678,15 +687,19 @@ var GridMap = function(container, options) {
       *   zIndex - specifies layer stacking order
       *   fillColor - fill color for vector layers
       *   strokeColor - stroke color for vector layers
+      *   colorScale - colorScale to use for this layer
       *   draw - whether to redraw GridMap immediately. Default: true
       */
     var layer = new Layer(self, options);
 
-    if (data.constructor === Float32Array) {
-      layer.grid = DataImport.float32ArrayToGrid(data, options.gridSize, self.colorScale);
-
-    } else if (data.constructor === Uint8Array || data.constructor === Uint8ClampedArray) {
-      layer.grid = new Grid(data, options.gridSize);
+    // duck type check to see if it's a (typed) array or object
+    if (data.reverse) {
+      var colorScale = (options && options.colorScale) || self.colorScale;
+      if (options.colorScaleDiscrete) {
+        // preprocess for performance, helpful with a lot of layers
+        colorScale.range(colorScale.range().map(Utils.colorStringToUint32));
+      }
+      layer.grid = DataImport.arrayToGrid(data, options.gridSize, colorScale);
 
     } else {
       // assume JSON
@@ -768,7 +781,7 @@ var GridMap = function(container, options) {
 window.d3.geo.GridMap = GridMap;
 window.d3.geo.GridMap.dispatch = d3.geo.GridMap.dispatch || d3.dispatch('drawStart', 'drawEnd', 'resize');
 
-},{"./data-import.js":1,"./grid.js":2,"./hud.js":3,"./layer.js":5,"./legend.js":6}],5:[function(require,module,exports){
+},{"./data-import.js":1,"./grid.js":2,"./hud.js":3,"./layer.js":5,"./legend.js":6,"./utils.js":7}],5:[function(require,module,exports){
 // IE 10 shim
 if(window.CanvasPixelArray) {
     CanvasPixelArray.prototype.set = function(arr) {
@@ -829,10 +842,9 @@ var Layer = function(gridMap, options) {
     }
 
     var imageData = new Uint32Array(buf);
-    var gridData = new Uint32Array(grid.data.buffer);
 
     for (var i=0, lim=indexMap.length; i<lim; i++) {
-      imageData[i] = gridData[indexMap[i]];
+      imageData[i] = grid.data[indexMap[i]];
     }
 
     if (!image.data.buffer) {
@@ -983,5 +995,24 @@ var Legend = function(options) {
 };
 
 module.exports = Legend;
+
+},{}],7:[function(require,module,exports){
+
+var Utils = {
+
+  colorStringToUint32: function(colorString) {
+    // given a colorString handleable by d3.rgb ("#ffffff"),
+    // converts it to a 32 bit integer which can
+    // be inserted in canvas array.
+    var rgb = d3.rgb(colorString);
+    return (255 << 24)   |
+            (rgb.b << 16) |
+            (rgb.g << 8)  |
+            rgb.r;
+  }
+
+};
+
+module.exports = Utils;
 
 },{}]},{},[4]);

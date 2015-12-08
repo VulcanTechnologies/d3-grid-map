@@ -1,8 +1,9 @@
+var DataImport = require('./data-import.js');
 var Grid = require('./grid.js');
 var HUD = require('./hud.js');
 var Layer = require('./layer.js');
 var Legend = require('./legend.js');
-var DataImport = require('./data-import.js');
+var Utils = require('./utils.js');
 
 try {
   /* fake it for IE10 */
@@ -93,15 +94,19 @@ var GridMap = function(container, options) {
 
   this.getGrid = function() {
     /**
-     * returns the first visible grid
+     * returns the first visible grid, or an array of grids if more than one
      */
 
-    // FIXME: is picking the first visible grid good enough?
-    var grid = null;
+    var grids = [];
     for (var i=0; i < this.layers.length; i++) {
       if (this.layers[i].grid && this.layers[i].visible) {
-        return this.layers[i].grid;
+        grids.push(this.layers[i].grid);
       }
+    }
+    if (grids.length === 1) {
+      return grids[0];
+    } else if (grids.length > 0) {
+      return grids;
     }
   };
 
@@ -272,15 +277,19 @@ var GridMap = function(container, options) {
       *   zIndex - specifies layer stacking order
       *   fillColor - fill color for vector layers
       *   strokeColor - stroke color for vector layers
+      *   colorScale - colorScale to use for this layer
       *   draw - whether to redraw GridMap immediately. Default: true
       */
     var layer = new Layer(self, options);
 
-    if (data.constructor === Float32Array) {
-      layer.grid = DataImport.float32ArrayToGrid(data, options.gridSize, self.colorScale);
-
-    } else if (data.constructor === Uint8Array || data.constructor === Uint8ClampedArray) {
-      layer.grid = new Grid(data, options.gridSize);
+    // duck type check to see if it's a (typed) array or object
+    if (data.reverse) {
+      var colorScale = (options && options.colorScale) || self.colorScale;
+      if (options.colorScaleDiscrete) {
+        // preprocess for performance, helpful with a lot of layers
+        colorScale.range(colorScale.range().map(Utils.colorStringToUint32));
+      }
+      layer.grid = DataImport.arrayToGrid(data, options.gridSize, colorScale);
 
     } else {
       // assume JSON
