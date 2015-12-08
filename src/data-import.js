@@ -98,12 +98,13 @@ var Data = {
       if(isNaN(value)) {
         continue;
       }
-      var color = d3.rgb(colorScale(value));
+      // var color = d3.rgb(colorScale(value));
+      // var colorInt = (255 << 24) |
+      //                      (color.b << 16) |
+      //                      (color.g << 8) |
+      //                      color.r;
 
-      colorData[i] = (255 << 24) |
-                     (color.b << 16) |
-                     (color.g << 8) |
-                     color.r;
+      colorData[i] = colorScale(value);
 
     }
 

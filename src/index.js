@@ -276,7 +276,7 @@ var GridMap = function(container, options) {
       */
     var layer = new Layer(self, options);
 
-    if (data.constructor === Float32Array) {
+    if (data.BYTES_PER_ELEMENT && data.BYTES_PER_ELEMENT === 4) {
       layer.grid = DataImport.float32ArrayToGrid(data, options.gridSize, self.colorScale);
 
     } else if (data.constructor === Uint8Array || data.constructor === Uint8ClampedArray) {
