@@ -114,7 +114,6 @@ var Layer = function(gridMap, options) {
         this.drawGeoJSONLayer();
     }
   };
-
 };
 
 module.exports = Layer;

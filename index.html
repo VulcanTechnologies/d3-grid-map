@@ -32,12 +32,17 @@
 
           var options = {
             legend: false,
+            cacheInitialProjection: true,
+            longitude: -47,
+            latitude: 10,
+            scale: 90,
             hud: {
               fontSize: 20,
               fontColor: 'white',
               verticalOffset: 5
             },
             onCellHover: function(feature) { console.log('hovering over ', feature);}
+
           };
 
           var map1 = new d3.geo.GridMap('#map1', options);
@@ -50,7 +55,7 @@
           options.projection = d3.geo.mercator();
           options.legend = false;
           options.scale = 100;
-          var map2 = new d3.geo.GridMap('#map2', options);
+          // var map2 = new d3.geo.GridMap('#map2', options);
 
           options.latitude = 47;
           options.scale = 200;
@@ -59,14 +64,14 @@
           var map3 = new d3.geo.GridMap('#map3', options);
 
           options.projection = d3.geo.gnomonic();
-          var map4 = new d3.geo.GridMap('#map4', options);
+          // var map4 = new d3.geo.GridMap('#map4', options);
 
           // add a topojson base layer to the maps
-          d3.json('data/countries.topojson', function(error, countries) {
+          d3.json('data/countries.json', function(error, countries) {
             map1.addLayer(countries);
-            map2.addLayer(countries);
+            // map2.addLayer(countries);
             map3.addLayer(countries);
-            map4.addLayer(countries);
+            // map4.addLayer(countries);
           });
 
           // add a packed binary data set to a map
@@ -74,45 +79,42 @@
             .responseType('arraybuffer')
             .get(function(error, xhr) {
               var data = new Float32Array(xhr.response);
-              quantileScale.domain(data);
               var layerOptions = {
                 gridSize: [w, h],
                 zIndex: 3,
                 renderOnAnimate: false,
-                colorScale: quantileScale
               };
-              // map1.addLayer(data, layerOptions);
-
               layerOptions.colorScale = d3.scale.threshold()
                 .domain([1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
                 .range(['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#fc8d59','#ef6548','#d7301f','#b30000', '#7f0000']);
               layerOptions.colorScaleDiscrete = true;
+              map1.addLayer(data, layerOptions);
               map3.addLayer(data, layerOptions);
             });
 
           // add a geojson dataset to a map
-          d3.json('data/eez.json', function(error, eez) {
-            var layer = map1.addLayer(eez, {
-              strokeColor: 'rgba(0,0,0,1)',
-              fillColor: 'rgba(0,0,0,.2)',
-              zIndex: 9,
-              renderOnAnimate: true
-            });
-          });
+          // d3.json('data/eez.json', function(error, eez) {
+          //   var layer = map1.addLayer(eez, {
+          //     strokeColor: 'rgba(0,0,0,1)',
+          //     fillColor: 'rgba(0,0,0,.2)',
+          //     zIndex: 9,
+          //     renderOnAnimate: true
+          //   });
+          // });
 
           // create some fake gridded data
-          var buf = new ArrayBuffer(w * h *4);
-          var dataFloat32 = new Float32Array(buf);
-          var index = -1;
-          for (var i=w*40; i<(w*h - w*40); i++) {
-            dataFloat32[i] = Math.sin(i/dataFloat32.length * 2 * Math.PI);
-          }
+          // var buf = new ArrayBuffer(w * h *4);
+          // var dataFloat32 = new Float32Array(buf);
+          // var index = -1;
+          // for (var i=w*40; i<(w*h - w*40); i++) {
+          //   dataFloat32[i] = Math.sin(i/dataFloat32.length * 2 * Math.PI);
+          // }
 
-          var fakeGridOptions = {
-            gridSize: [w,h],
-            renderOnAnimate: false,
-            colorScale: d3.scale.linear().domain([0,1]).range(['#000000', '#ffffff'])
-          };
+          // var fakeGridOptions = {
+          //   gridSize: [w,h],
+          //   renderOnAnimate: false,
+          //   colorScale: d3.scale.linear().domain([0,1]).range(['#000000', '#ffffff'])
+          // };
           // map2.addLayer(dataFloat32, fakeGridOptions);
 
         </script>

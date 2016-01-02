@@ -21,6 +21,7 @@ var GridMap = function(container, options) {
 
   this.container = d3.select(container);
 
+  self.initialPosition = true;
   var rect = this.container.node().getBoundingClientRect();
   this.width = rect.width | 0;
   this.height = rect.height | 0;
@@ -28,13 +29,12 @@ var GridMap = function(container, options) {
   this.layers = [];
   this.options = options || {};
 
-  this.seaColor = this.options.seaColor || 'rgba(21,98,180,.8)';
-  this.graticuleColor = this.options.graticuleColor || 'rgba(255,255,255,.3)';
+  this.seaColor = options.seaColor || 'rgba(21,98,180,.8)';
+  this.graticuleColor = options.graticuleColor || 'rgba(255,255,255,.3)';
 
-
-  var rotateLatitude = -this.options.latitude || 0;
-  var rotateLongitude = -this.options.longitude || 0;
-  var scale = this.options.scale || 150;
+  var rotateLatitude = -options.latitude || 0;
+  var rotateLongitude = -options.longitude || 0;
+  var scale = options.scale || 150;
   self.area = 1; // minimum area threshold for simplification
 
   this.dispatch = d3.geo.GridMap.dispatch; //singleton
@@ -146,6 +146,7 @@ var GridMap = function(container, options) {
 
     var drag = d3.behavior.drag()
       .on('dragstart', function () {
+        self.initialPosition = false;
       })
       .on('drag', function () {
         rotateLongitude += 100 * d3.event.dx / scale;
@@ -160,6 +161,7 @@ var GridMap = function(container, options) {
     if (!self.options.disableMouseZoom) {
       var zoom = d3.behavior.zoom()
         .on('zoomstart', function() {
+          self.initialPosition = false;
         })
         .on('zoomend', function() {
           self.draw();
@@ -296,6 +298,7 @@ var GridMap = function(container, options) {
       if (data.type === 'Topology') {
         // it is topojson, convert it
         var topojsonObject = (options && options.topojsonObject) || data.objects[Object.keys(data.objects)[0]];
+        // data = topojson.feature(data, topojsonObject);
         data = topojson.feature(topojson.presimplify(data), topojsonObject);
         layer.simplified = true;
       }

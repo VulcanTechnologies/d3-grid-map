@@ -114,9 +114,21 @@ var Grid = function(data, gridSize, rawData) {
 
     var indexMap = null;
     var cache = gridMap; // do something better for caching
+
+    var localStorageCacheKey = JSON.stringify({id: gridMap.container.attr('id'), cacheKey: cacheKey});
+
     if (cache.indexMapCache && cache.indexMapCache[cacheKey]) {
       indexMap = cache.indexMapCache[cacheKey];
-    } else {
+    } else if (gridMap.options.cacheInitialProjection && gridMap.initialPosition) {
+      var cached = localStorage.getItem(localStorageCacheKey);
+      if (cached) {
+        console.log('got localstorage cache: ' + localStorageCacheKey);
+        indexMap = JSON.parse(cached);
+        localStorageCacheKey = null;
+      }
+    }
+    if (!indexMap) {
+      // caches missed, build the index map
       indexMap = new Uint32Array(gridMap.height * gridMap.width);
 
       var w = gridMap.width;
@@ -127,6 +139,17 @@ var Grid = function(data, gridSize, rawData) {
 
       cache.indexMapCache = {};
       cache.indexMapCache[cacheKey] = indexMap;
+      if (gridMap.options.cacheInitialProjection && gridMap.initialPosition && localStorageCacheKey) {
+        console.log('caching projection in local storage ' + localStorageCacheKey);
+        try {
+          // convert typed array to a JSON serialiable
+          var jsonIndexMap = JSON.stringify(Array.prototype.slice.call(indexMap));
+          localStorage.setItem(localStorageCacheKey, jsonIndexMap);
+        } catch(err0r) {
+          console.log('failed to store indexMap: ', err0r, ' ambitiously clearing');
+          localStorage.clear();
+        }
+      }
     }
     return indexMap;
   };
