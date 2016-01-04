@@ -797,6 +797,7 @@ var Layer = function(gridMap, options) {
   this.options = options || {};
   this.options.strokeColor = this.options.strokeColor || 'rgba(100,100,100,.8)';
   this.options.fillColor = this.options.fillColor ||  'rgba(237,178,48,1)';
+  this.options.strokeWidth = this.options.strokeWidth || 0.5;
   if (this.options.zIndex === undefined) {
     // zIndex of 0 is valid
     this.options.zIndex = 1;
@@ -870,7 +871,7 @@ var Layer = function(gridMap, options) {
       gridMap.path.context(context)(this.json);
     }
     context.strokeStyle = this.options.strokeColor;
-    context.lineWidth = 0.5;
+    context.lineWidth = this.options.strokeWidth;
     context.stroke();
 
     context.fillStyle = this.options.fillColor;
