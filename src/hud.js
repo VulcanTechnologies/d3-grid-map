@@ -15,7 +15,7 @@ var HUD = function(gridMap) {
   var context = canvas.node().getContext('2d');
   this.context = context;
 
-  var graticule = d3.geo.graticule()();
+  var graticule = gridMap.options.graticule || d3.geo.graticule()()
 
   this.resize = function(width, height) {
     canvas.attr('width', width);

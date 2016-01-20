@@ -54,6 +54,9 @@
 
           options.latitude = 47;
           options.scale = 200;
+          options.graticule = new d3.geo.graticule()
+            .minorStep([1,1])
+            .minorExtent([[-180, -90], [180, 90]])();
           var orthographicProjection = d3.geo.orthographic().clipAngle(90);
           options.projection = orthographicProjection;
           var map3 = new d3.geo.GridMap('#map3', options);

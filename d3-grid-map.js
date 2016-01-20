@@ -317,7 +317,10 @@ var HUD = function(gridMap) {
   var context = canvas.node().getContext('2d');
   this.context = context;
 
-  var graticule = d3.geo.graticule()();
+  // var graticule = d3.geo.graticule()();
+  var graticule = gridMap.options.graticule || d3.geo.graticule()()
+    // .minorStep(gridMap.options.minorStep)();
+  //   .majorStep(gridMap.options.majorStep);
 
   this.resize = function(width, height) {
     canvas.attr('width', width);
@@ -440,7 +443,6 @@ var GridMap = function(container, options) {
 
   this.seaColor = this.options.seaColor || 'rgba(21,98,180,.8)';
   this.graticuleColor = this.options.graticuleColor || 'rgba(255,255,255,.3)';
-
 
   var rotateLatitude = -this.options.latitude || 0;
   var rotateLongitude = -this.options.longitude || 0;
