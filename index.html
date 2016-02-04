@@ -18,9 +18,11 @@
         <div class="map" id="map2"></div>
         <div class="map" id="map3"></div>
         <div class="map" id="map4"></div>
-        <script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
-        <script src="https://cdn.rawgit.com/d3/d3-geo-projection/master/d3.geo.projection.js"></script>
-        <script src="https://cdn.rawgit.com/mbostock/topojson/master/topojson.js"></script>
+
+        <script src="bower_components/d3/d3.js"></script>
+        <script src="bower_components/d3-geo-projection/d3.geo.projection.js"></script>
+        <script src="bower_components/topojson/topojson.js"></script>
+
         <script src="d3-grid-map.js"></script>
         <script type="text/javascript">
 
@@ -84,13 +86,16 @@
                 renderOnAnimate: false,
                 colorScale: quantileScale
               };
-              // map1.addLayer(data, layerOptions);
+
+              map1.addLayer(data, layerOptions);
+              map2.addLayer(data, layerOptions);
 
               layerOptions.colorScale = d3.scale.threshold()
                 .domain([1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
                 .range(['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#fc8d59','#ef6548','#d7301f','#b30000', '#7f0000']);
               layerOptions.colorScaleDiscrete = true;
               map3.addLayer(data, layerOptions);
+              map4.addLayer(data, {});
             });
 
           // add a geojson dataset to a map
