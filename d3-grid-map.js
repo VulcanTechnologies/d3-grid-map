@@ -831,7 +831,8 @@ var Layer = function(gridMap, options) {
 
   this.renderGridToCanvas = function(grid, indexMap) {
 
-    var image = context.getImageData(0, 0, gridMap.width, gridMap.height);
+    var image = context.createImageData(gridMap.width, gridMap.height);
+
     var buf = null;
     if (image.data.buffer) {
       // modern browsers can access the buffer directly

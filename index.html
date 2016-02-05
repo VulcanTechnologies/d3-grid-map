@@ -79,7 +79,9 @@
             .responseType('arraybuffer')
             .get(function(error, xhr) {
               var data = new Float32Array(xhr.response);
-              quantileScale.domain(data);
+              // unfortunately d3.scale.domain doesn't support
+              // typed arrays
+              quantileScale.domain(Array.prototype.slice.call(data));
               var layerOptions = {
                 gridSize: [w, h],
                 zIndex: 3,
@@ -95,7 +97,6 @@
                 .range(['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#fc8d59','#ef6548','#d7301f','#b30000', '#7f0000']);
               layerOptions.colorScaleDiscrete = true;
               map3.addLayer(data, layerOptions);
-              map4.addLayer(data, {});
             });
 
           // add a geojson dataset to a map
