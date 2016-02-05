@@ -282,7 +282,7 @@ var GridMap = function(container, options) {
     var layer = new Layer(self, options);
 
     // duck type check to see if it's a (typed) array or object
-    if (data.reverse) {
+    if (data.BYTES_PER_ELEMENT) {
       var colorScale = (options && options.colorScale) || self.colorScale;
       if (options.colorScaleDiscrete) {
         // preprocess for performance, helpful with a lot of layers

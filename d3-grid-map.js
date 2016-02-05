@@ -317,10 +317,7 @@ var HUD = function(gridMap) {
   var context = canvas.node().getContext('2d');
   this.context = context;
 
-  // var graticule = d3.geo.graticule()();
   var graticule = gridMap.options.graticule || d3.geo.graticule()()
-    // .minorStep(gridMap.options.minorStep)();
-  //   .majorStep(gridMap.options.majorStep);
 
   this.resize = function(width, height) {
     canvas.attr('width', width);
@@ -695,7 +692,7 @@ var GridMap = function(container, options) {
     var layer = new Layer(self, options);
 
     // duck type check to see if it's a (typed) array or object
-    if (data.reverse) {
+    if (data.BYTES_PER_ELEMENT) {
       var colorScale = (options && options.colorScale) || self.colorScale;
       if (options.colorScaleDiscrete) {
         // preprocess for performance, helpful with a lot of layers
