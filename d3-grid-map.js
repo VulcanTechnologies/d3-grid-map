@@ -521,10 +521,13 @@ var GridMap = function(container, options) {
   };
 
   this.onMouseMove = function() {
-    if (!self.options.onCellHover && !self.options.hud) {
+    if (!self.options.onCellHover && !self.options.hud && !self.options.onMouseMove) {
       return;
     }
     var coords = self.projection.invert(d3.mouse(this));
+    if (self.options.onMouseMove) {
+      self.options.onMouseMove(coords);
+    }
 
     if (!coords) {
       return;
