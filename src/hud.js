@@ -26,7 +26,7 @@ var HUD = function(gridMap) {
     context.beginPath();
     gridMap.path.context(context)(graticule);
     context.closePath();
-    context.lineWidth = 1;
+    context.lineWidth = gridMap.graticuleWidth;
     context.strokeStyle = gridMap.graticuleColor;
     context.stroke();
   };
