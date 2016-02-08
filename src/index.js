@@ -30,6 +30,7 @@ var GridMap = function(container, options) {
 
   this.seaColor = this.options.seaColor || 'rgba(21,98,180,.8)';
   this.graticuleColor = this.options.graticuleColor || 'rgba(255,255,255,.3)';
+  this.graticuleWidth = this.options.graticuleWidth || 1;
 
   var rotateLatitude = -this.options.latitude || 0;
   var rotateLongitude = -this.options.longitude || 0;
